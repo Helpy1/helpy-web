@@ -17,27 +17,49 @@ const SplashScreen = () => {
     };
 
     const handleLoginGoogle = async () => {
-      
+        let userData = null; // Declare userData outside of try block
+    
         try {
-          const result = await signInWithPopup(auth, provider);
-          const user = result.user;
-          
-          // Creating the parent object with uid and email
-          const userData = {
-            uid: user.uid,
-            email: user.email,
-            logintype: 'Google'
-          };
-          
-          // Navigating to the SignUp page with userData
-          navigate('/UserDetail', { state: { userData } });
-      
-          // Logging the extracted values
-          console.log("User Data:", userData);
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+    
+            // Creating the parent object with uid and email
+            userData = {
+                uid: user.uid,
+                email: user.email,
+                logintype: 'Google'
+            };
+    
+            // Log the extracted values
+            console.log("User Data:", userData);
+    
+            // Make the GET request with the user UID
+            const uGuid = userData.uid;
+            const response = await fetch(`https://usamaanwar-001-site1.atempurl.com/api/account/GetUserDetail?uGuid=${uGuid}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+    
+            const fetchedUserData = await response.json();
+            console.log('API response from GET:', fetchedUserData);
+    
+            // Navigate to /Home with state containing fetched user data
+            navigate('/Home', { state: { data: fetchedUserData } });
+    
         } catch (error) {
-          console.error("Error during login:", error);
+            if (userData) {
+                navigate('/UserDetail', { state: userData });
+                console.log("Data sent");
+            } else {
+                console.log("No user data to send");
+            }
+            console.error("Error during login:", error);
+            // Handle error here, e.g., show a notification to the user
         }
-      };
+    };
+    
 
     const handleLoginFacebook = async () => {
         try {

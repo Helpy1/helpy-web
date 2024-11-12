@@ -279,6 +279,8 @@ function UserDetail() {
 
     // Final submit function to handle the entire form submission
     const submitForm = () => {
+        const uGuid = userData ? userData.uid : userUID;  // Set uGuid based on condition
+    
         const formData = {
             useradditionalData: {
                 ageRange: [0, 0],
@@ -291,7 +293,7 @@ function UserDetail() {
                 relationshipStatus: relationshipStatus || 'string',
                 smoking: smoking || 'string'
             },
-            uGuid: userUID || userData?.uid,
+            uGuid: uGuid,
             age: age || 0,
             birthday: birthday || 'string',
             description: loginObj.description || 'string',
@@ -312,9 +314,9 @@ function UserDetail() {
             latitude: String(latitude || ''),
             lookingFor: lookingfor || 'string'
         };
-
+    
         console.log("Final form data:", formData);
-
+    
         // Make the POST request
         fetch('https://usamaanwar-001-site1.atempurl.com/api/account/registerthirdpartyuser', {
             method: 'POST',
@@ -326,9 +328,9 @@ function UserDetail() {
             .then(response => response.json())
             .then(data => {
                 console.log('API response from POST:', data);
-
-                // Make the GET request with the userUID
-                return fetch(`https://usamaanwar-001-site1.atempurl.com/api/account/GetUserDetail?uGuid=${userUID}`, {
+    
+                // Make the GET request with the user UID based on the condition
+                return fetch(`https://usamaanwar-001-site1.atempurl.com/api/account/GetUserDetail?uGuid=${uGuid}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
@@ -338,7 +340,7 @@ function UserDetail() {
             .then(response => response.json())
             .then(userData => {
                 console.log('API response from GET:', userData);
-
+    
                 // Navigate to /Home with state containing user data
                 navigate('/Home', { state: { data: userData } });
             })
