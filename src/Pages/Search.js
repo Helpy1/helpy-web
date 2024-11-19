@@ -49,51 +49,7 @@ const Search = () => {
             setdontShowMembers([...dontShowMembers, tag]);
         }
     };
-    // const profiles = [
-    //     {
-    //         id: 1,
-    //         name: 'serena',
-    //         age: 25,
-    //         location: 'Mumbai, MH, IN',
-    //         image: 'https://i.pravatar.cc/150?img=3',
-    //         newMember: true,
-    //     },
-    //     {
-    //         id: 2,
-    //         name: 'Mistress Mona',
-    //         age: 39,
-    //         location: 'Mumbai, MH, IN',
-    //         image: 'https://i.pravatar.cc/150?img=1',
-    //         newMember: false,
-    //     },
-    //     {
-    //         id: 3,
-    //         name: 'Mini',
-    //         age: 30,
-    //         location: 'Pune, MH, IN',
-    //         image: 'https://i.pravatar.cc/150?img=2',
-    //         newMember: true,
-    //         online: true,
-    //     },
-    //     {
-    //         id: 4,
-    //         name: 'Mini',
-    //         age: 30,
-    //         location: 'Pune, MH, IN',
-    //         image: 'https://i.pravatar.cc/150?img=4',
-    //         newMember: false,
-    //         online: true,
-    //     },
-    //     {
-    //         id: 5,
-    //         name: 'Mini',
-    //         age: 30,
-    //         location: 'Pune, MH, IN',
-    //         image: 'https://i.pravatar.cc/150?img=5',
-    //         newMember: true,
-    //         online: true,
-    //     },
-    // ];
+
     const options = [
         { label: 'ID Verified' },
         { label: 'Premium' },
@@ -110,8 +66,8 @@ const Search = () => {
         <div>
             <Navbar></Navbar>
             {/* Sidebar Filters */}
-            <div className="flex flex-col md:flex-row w-full max-w-[1400px] m-auto h-full p-4">
-                <aside className='w-full md:w-1/4 lg:w-[30%]'>
+            <div className="flex flex-col lg:flex-row w-full max-w-[1400px] m-auto h-full p-4">
+                <aside className='w-full w-100% lg:w-[30%]'>
                     <h2 className="text-lg font-bold mb-4">Search Filters</h2>
 
 
@@ -840,7 +796,7 @@ const Search = () => {
                 </aside>
 
                 {/* Main Content */}
-                <main className="w-full md:w-3/4 lg:w-4/5 mt-6 md:mt-0 md:ml-8">
+                <main className="w-full  lg:w-4/5 mt-6 lg:mt-0 lg:ml-8">
                     <div className="profile-cards grid gap-6 w-full max-w-[1200px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                         {profiles.map(profile => (
                             <ProfileCard key={profile.id} profile={profile} />
