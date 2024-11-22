@@ -1,11 +1,62 @@
-import React, { useState, useEffect } from 'react';
-import ProfileCard from './Components/Cards/ProfileCard';
-import Navbar from './Navbar';
+import React, { useState, useMemo, useEffect } from 'react';
+import { MdVerified } from "react-icons/md";
+import { FaUser, FaGraduationCap, FaWineGlassAlt, FaSmokingBan, FaChild, FaGlobe } from 'react-icons/fa';
+import { FaHeart, FaRegHeart, FaBell, FaLocationDot, FaHouse } from 'react-icons/fa6';
+import { FaUserClock } from "react-icons/fa";
+import { GiBodyHeight } from "react-icons/gi";
+import { IoMdMan } from "react-icons/io";
+import { debounce } from 'lodash';
+import 'react-photo-view/dist/react-photo-view.css';
 import Slider from "rc-slider";
 import 'rc-slider/assets/index.css';
 import { useLocation } from 'react-router-dom';
 
-const Search = () => {
+const userData = {
+    userId: 261,
+    fullName: "Marie",
+    uGuid: "muRNCeQ2t5WZLEU6ZMKYfVNd7KP2",
+    isActive: true,
+    lastActive: "2 Minutes Ago",
+    userStatus: true,
+    subscriptionId: 1,
+    gender: "Women",
+    occupation: "Test",
+    age: 24,
+    birthday: "2000-11-14T00:00:00",
+    createdDate: "2024-11-14T07:29:00.159564",
+    email: "d.marie@gmail.com",
+    ethnicity: "White/Caucasian",
+    sexuality: "Straight",
+    description: "Test",
+    intentions: "Test",
+    phoneNumber: null,
+    subscriptionName: "Trial",
+    subscriptionPrice: 0,
+    subsriptionDurationInDays: 3,
+    ageRangeMin: 18,
+    ageRangeMax: 60,
+    bodyType: "Slim",
+    children: "Not",
+    drinking: "Non-drinker",
+    education: "High school",
+    heightInInches: 66,
+    language: "English",
+    relationshipStatus: "Single",
+    smoking: "Non-smoker",
+    imagePaths: [
+        "https://firebasestorage.googleapis.com/v0/b/helpy-6f93d.appspot.com/o/Images%2FmuRNCeQ2t5WZLEU6ZMKYfVNd7KP2%2FPost_3.jpg?alt=media&token=b93fae7b-e176-4a66-bf2d-acd45ab32dab",
+        "https://firebasestorage.googleapis.com/v0/b/helpy-6f93d.appspot.com/o/Images%2FmuRNCeQ2t5WZLEU6ZMKYfVNd7KP2%2FPost_1.jpg?alt=media&token=c92b7537-e169-4189-ae80-6b1d32f6b891",
+        "https://firebasestorage.googleapis.com/v0/b/helpy-6f93d.appspot.com/o/Images%2FmuRNCeQ2t5WZLEU6ZMKYfVNd7KP2%2FProfile_image.jpg?alt=media&token=160de616-3c50-4593-810d-195375312c9d",
+    ],
+    city: "Lahore",
+    country: "Pakistan",
+    longitude: "74.3533563",
+    latitude: "31.4991339",
+    totalGhostEntries: 0,
+    lookingFor: "Friendship",
+};
+
+function EditPofile() {
     const location = useLocation();
     const profiles = location.state?.profiles || []; // Use profiles passed from Home
 
@@ -61,147 +112,216 @@ const Search = () => {
         { label: 'Viewed' },
         { label: 'Favorited' },
     ];
+    const [isFilled, setIsFilled] = useState(false);
+    const [isAboutmeFilled, setIsAboutmeFilled] = useState(false);
+    const [isSeekingFilled, setIsSeekingFilled] = useState(false);
+    const [isExtraDetailsFilled, setIsExtraDetailsFilled] = useState(false);
+
+    const images = userData.imagePaths && userData.imagePaths.length > 0 ? userData.imagePaths : [];
+
+    // Initialize favorites array with 'false' for each image
+    const [favorites, setFavorites] = useState(new Array(images.length).fill(false));
+
+    // Debounce the function to minimize state change impact
+    const debouncedSetPhotoIndex = useMemo(() => debounce(() => { }, 200), []);
+
+    const toggleHeart = () => {
+        setIsFilled(!isFilled);
+    };
+    const toggleAboutmeHeart = () => {
+        setIsAboutmeFilled(!isAboutmeFilled);
+    };
+    const toggleSeekingHeart = () => {
+        setIsSeekingFilled(!isSeekingFilled);
+    };
+    const toggleExtraDetails = () => {
+        setIsExtraDetailsFilled(!isExtraDetailsFilled);
+    };
+    const toggleHeartFvrt = (index) => {
+        setFavorites((prevFavorites) => {
+            const newFavorites = [...prevFavorites];
+            newFavorites[index] = !newFavorites[index]; // Toggle only the selected image
+            return newFavorites;
+        });
+    };
 
     return (
-        <div>
-            <Navbar></Navbar>
-            {/* Sidebar Filters */}
-            <div className="flex flex-col lg:flex-row w-full max-w-[1400px] m-auto h-full p-4">
-                <aside className='w-full w-100% lg:w-[30%]'>
-                    <h2 className="text-lg font-bold mb-4">Search Filters</h2>
+        <div className="flex flex-col lg:flex-row w-full max-w-[1400px] m-auto h-full p-4 gap-8">
+            <aside className='w-full w-100% lg:w-[30%]'>
+                <div className='relative'>
+                    <span className="bg-blue-800 text-white text-xs font-medium absolute right-[14px] top-[12px] px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
 
-
-                    <select
-                        className="w-full border rounded-[16px] p-2 mb-4"
-                        style={{ outline: 'none', boxShadow: 'none' }}
-                    >
-                        <option value="" disabled>Select Gender</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="non-binary">Non-Binary</option>
-                    </select>
-
-                    <div className="w-full bg-white p-4 rounded-lg shadow-md">
-
-                        <button
-                            type="button"
-                            className="btn flex flex-col justify-center items-center bg-[#e9677b] text-white w-full py-3 rounded-[12px]  hover:bg-[#f86a82] transition"
-                        >
-                            View Results
-                        </button>
-                        <div className=" flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4 items-center w-full my-7">
-                            <button
-                                className="w-full md:flex-1 px-6 py-3 border rounded-lg text-[#e9677b] border-gray-300 hover:bg-gray-100 transition duration-150 ease-in-out"
-                            >
-                                Save this Search
-                            </button>
-                            <button
-                                className="w-full md:w-fit px-6 py-3 border rounded-lg text-[#e9677b] border-gray-300 hover:bg-gray-100 transition duration-150 ease-in-out"
-                            >
-                                Reset
-                            </button>
+                        PREMIUM</span>
+                    <img
+                        alt='Profile Pic'
+                        src={userData.imagePaths[0]}
+                        className="w-full h-96 object-cover object-center rounded-md"
+                    />
+                    <div onClick={toggleHeart} className="cursor-pointer absolute right-[16px] bottom-[16px]">
+                        {isFilled ? (
+                            <FaHeart className="text-red-500 w-8 h-8" />
+                        ) : (
+                            <FaRegHeart className="text-white w-8 h-8" />
+                        )}
+                    </div>
+                </div>
+                <div className="w-full bg-white shadow-md rounded-lg px-4 py-5  mt-6">
+                    {/* Profile Details */}
+                    <div className="flex flex-row justify-between">
+                        <div className=" flex-grow-[1] flex-shrink-[1] items-center justify-start flex gap-2"><GiBodyHeight /><span >{(userData.heightInInches * 0.0833333).toFixed(1)}</span></div>
+                        <div className=" flex-grow-[1] flex-shrink-[1] items-center justify-center flex gap-1"><IoMdMan /><span>{userData.bodyType}</span></div>
+                        <div className=" flex-grow-[1] flex-shrink-[1] items-center justify-end flex gap-2"><FaHeart /><span>{userData.relationshipStatus}</span></div>
+                    </div>
+                </div>
+                <div className="w-full bg-white shadow-md rounded-lg px-4 py-6  mt-4">
+                    {/* Active Status and Location */}
+                    <div className="flex items-center  justify-between gap-3">
+                        <div className="flex items-start gap-2">
+                            <span className='relative top-1'><FaBell /></span>
+                            <span className='text-sm'>{userData.lastActive}</span>
                         </div>
-                        <label className="block text-sm  font-medium mb-4">Location</label>
-                        <div className="pb-4">
-                            <div className="mb-4 pl-2">
-                                <label className="flex items-center mb-2 text-sm">
-                                    <input
-                                        type="radio"
-                                        name="location"
-                                        value="cartagena"
-                                        checked={selectedLocation === 'cartagena'}
-                                        onChange={() => setSelectedLocation('cartagena')}
-                                        className="mr-2  text-blue-600 bg-gray-100   dark:ring-offset-gray-800  dark:bg-gray-700 dark:border-gray-600"
-                                    />
 
-                                    Cartagena de Indias
-                                </label>
-                                <label className="flex items-center text-sm">
-                                    <input
-                                        type="radio"
-                                        name="location"
-                                        value="other"
-                                        checked={selectedLocation === 'other'}
-                                        onChange={() => setSelectedLocation('other')}
-                                        className="mr-2  text-blue-600 bg-gray-100   dark:ring-offset-gray-800  dark:bg-gray-700 dark:border-gray-600"
-                                    />
-                                    Other Locations
-                                </label>
-                            </div>
-
-                            {selectedLocation === 'cartagena' && (
-                                <div className="distance-container">
-                                    <label className="block mb-3 font-medium">Distance (km)</label>
-                                    <div className='flex row items-center gap-2 mb-2'>
-                                        <span className='text-[14px] '>0 - </span>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="1500"
-                                            value={distance}
-                                            onChange={(e) => {
-                                                const newValue = e.target.value;
-
-                                                // Check if the input is empty
-                                                if (newValue === '') {
-                                                    setDistance(''); // Set state to an empty string if input is cleared
-                                                } else {
-                                                    // Convert to number and restrict to max 1500
-                                                    setDistance(Math.min(1500, Number(newValue)));
-                                                }
-                                            }}
-                                            className="border p-1 w-fit text-[14px] rounded-md ps-2 py-2 focus:shadow-none focus:ring-0 focus:ring-transparent focus:outline-none"
-                                        />
-                                        <span className='text-[14px] '>km</span>
-                                    </div>
-                                    <Slider
-                                        min={0}
-                                        max={1500}
-                                        value={distance || 0} // Default to 0 if distance is empty
-                                        onChange={(value) => {
-                                            const newValue = Math.min(1500, value);
-                                            setDistance(newValue);
-                                        }}
-                                    />
-                                </div>
-                            )}
-
-                            {selectedLocation === 'other' && (
-                                <div className="other-container">
-                                    <input type="text" placeholder="City, postal code, region, country" className="border w-full p-2 mb-4 rounded-lg focus:outline-none" />
-                                </div>
-                            )}
-
+                        <div className="flex items-start gap-2">
+                            <span className='relative top-1'><FaLocationDot /></span>
+                            <span className='text-sm'>{userData.city}, {userData.country}</span>
                         </div>
-                        <label className="block mb-3 font-medium">OPTIONS</label>
-                        <div className="grid grid-cols-2 gap-2 mb-4">
-                            {options.map((option, index) => (
-                                <label key={index} className="flex items-center space-x-2">
-                                    <input
-                                        type="checkbox"
-                                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                    />
-                                    <span className="text-sm text-gray-700">{option.label}</span>
-                                </label>
-                            ))}
+                    </div>
+                </div>
+                <div className="w-full bg-white shadow-md rounded-lg px-4 py-6  mt-4">
+                    {/* Active Status and Location */}
+                    <div className="flex items-center  justify-between gap-3">
+                        <div className="flex items-start gap-2">
+                            <span className='relative top-[2px]'><FaHouse /></span>
+                            <span className='text-base'>{userData.city}</span>
                         </div>
-                        <div>
-                            <label className="block text-sm mb-2 font-medium">Age</label>
-                            <div className="my-4">
-                                <Slider
-                                    range
-                                    min={18}
-                                    max={60}
-                                    value={ageRange}
-                                    onChange={(value) => setAgeRange(value)}
+                    </div>
+                </div>
+                <div className="w-full bg-white shadow-md rounded-lg px-4 py-6  mt-4 ">
+                    <div className="flex items-center  justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <span className='relative '><FaUserClock /></span>
+                            <span className='text-base'>Member Since</span>
+                        </div>
+                        <span className='text-base'>
+                            {new Date(userData.createdDate).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: '2-digit'
+                            })}
+                        </span>
+                    </div>
+                    <hr className="border-t-1 border-gray-200 my-4"></hr>
+                    <div className="flex items-center mb-1 gap-2">
+                        <h1 className="text-base font-medium">Verifications</h1>
+                        <MdVerified className='text-[#4A90E2]' />
+                    </div>
+                </div>
+            </aside>
+            <main className="w-full lg:w-[70%] mt-6 lg:mt-0 ">
+
+                <div className="w-full bg-white p-4 rounded-lg shadow-md">
+                    <label className="block text-sm  font-medium mb-4">Location</label>
+                    <div className="pb-4">
+                        <div className="mb-4 pl-2">
+                            <label className="flex items-center mb-2 text-sm">
+                                <input
+                                    type="radio"
+                                    name="location"
+                                    value="cartagena"
+                                    checked={selectedLocation === 'cartagena'}
+                                    onChange={() => setSelectedLocation('cartagena')}
+                                    className="mr-2  text-blue-600 bg-gray-100   dark:ring-offset-gray-800  dark:bg-gray-700 dark:border-gray-600"
                                 />
-                                <div className="text-sm mt-2">
-                                    {`Age: ${ageRange[0]} - ${ageRange[1]}`}
+
+                                Cartagena de Indias
+                            </label>
+                            <label className="flex items-center text-sm">
+                                <input
+                                    type="radio"
+                                    name="location"
+                                    value="other"
+                                    checked={selectedLocation === 'other'}
+                                    onChange={() => setSelectedLocation('other')}
+                                    className="mr-2  text-blue-600 bg-gray-100   dark:ring-offset-gray-800  dark:bg-gray-700 dark:border-gray-600"
+                                />
+                                Other Locations
+                            </label>
+                        </div>
+
+                        {selectedLocation === 'cartagena' && (
+                            <div className="distance-container">
+                                <label className="block mb-3 font-medium">Distance (km)</label>
+                                <div className='flex row items-center gap-2 mb-2'>
+                                    <span className='text-[14px] '>0 - </span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="1500"
+                                        value={distance}
+                                        onChange={(e) => {
+                                            const newValue = e.target.value;
+
+                                            // Check if the input is empty
+                                            if (newValue === '') {
+                                                setDistance(''); // Set state to an empty string if input is cleared
+                                            } else {
+                                                // Convert to number and restrict to max 1500
+                                                setDistance(Math.min(1500, Number(newValue)));
+                                            }
+                                        }}
+                                        className="border p-1 w-fit text-[14px] rounded-md ps-2 py-2 focus:shadow-none focus:ring-0 focus:ring-transparent focus:outline-none"
+                                    />
+                                    <span className='text-[14px] '>km</span>
                                 </div>
+                                <Slider
+                                    min={0}
+                                    max={1500}
+                                    value={distance || 0} // Default to 0 if distance is empty
+                                    onChange={(value) => {
+                                        const newValue = Math.min(1500, value);
+                                        setDistance(newValue);
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        {selectedLocation === 'other' && (
+                            <div className="other-container">
+                                <input type="text" placeholder="City, postal code, region, country" className="border focus:shadow-none focus:ring-0 focus:ring-transparent w-full p-2 mb-4 rounded-lg focus:outline-none" />
+                            </div>
+                        )}
+
+                    </div>
+                    <label className="block mb-3 font-medium">OPTIONS</label>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                        {options.map((option, index) => (
+                            <label key={index} className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <span className="text-sm text-gray-700">{option.label}</span>
+                            </label>
+                        ))}
+                    </div>
+                    <div>
+                        <label className="block text-sm mb-2 font-medium">Age</label>
+                        <div className="my-4">
+                            <Slider
+                                range
+                                min={18}
+                                max={60}
+                                value={ageRange}
+                                onChange={(value) => setAgeRange(value)}
+                            />
+                            <div className="text-sm mt-2">
+                                {`Age: ${ageRange[0]} - ${ageRange[1]}`}
                             </div>
                         </div>
-                        <div className="w-full max-w-md mx-auto mt-4">
-                            {/* First Accordion */}
+                    </div>
+                    <div className="w-full  mt-4">
+                        {/* First Accordion */}
+                        <div class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols- lg:grid-cols-2 gap-4">
                             <div className="mb-4">
                                 <h2 id="accordion-heading-1">
                                     <button
@@ -251,8 +371,6 @@ const Search = () => {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Second Accordion */}
                             <div className="mb-4">
                                 <h2 id="accordion-heading-2">
                                     <button
@@ -768,44 +886,24 @@ const Search = () => {
                                     </div>
                                 </div>
                             </div>
-                            {/* Additional Accordions Can Be Added Here in Similar Fashion */}
-                            <div className="other-container">
-                                <label className="block text-sm mb-2 font-medium">Profile Text</label>
-                                <input type="text" placeholder="e.g. hiking, John Doe, shopping" className="border focus:shadow-none focus:ring-0 focus:ring-transparent w-full p-2 mb-4 rounded-lg focus:outline-none" />
-                            </div>
-                            <button
-                                type="button"
-                                className="btn flex flex-col justify-center items-center bg-[#e9677b] text-white w-full py-3 rounded-[12px] mb-4 hover:bg-[#f86a82] transition"
-                            >
-                                View Results
-                            </button>
-                            <div className=" flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4 items-center w-full">
-                                <button
-                                    className="w-full md:flex-1 px-6 py-3 border rounded-lg text-[#e9677b] border-gray-300 hover:bg-gray-100 transition duration-150 ease-in-out"
-                                >
-                                    Save this Search
-                                </button>
-                                <button
-                                    className="w-full md:w-fit px-6 py-3 border rounded-lg text-[#e9677b] border-gray-300 hover:bg-gray-100 transition duration-150 ease-in-out"
-                                >
-                                    Reset
-                                </button>
-                            </div>
+                        </div>
+                        <div className="other-container">
+                            <label className="block text-sm mb-2 font-medium">Profile Text</label>
+                            <input type="text" placeholder="Share a captivating phrase" className="border focus:shadow-none focus:ring-0 focus:ring-transparent w-full p-2 mb-4 rounded-lg focus:outline-none" />
+                        </div>
+                        <div className="other-container">
+                            <label className="block text-sm mb-2 font-medium">What I am Seeking</label>
+                            <textarea type="text" placeholder="Need help? Talk about the kind of relationship you want, and note your deal breakers!" rows="4"  className="resize-none  border focus:shadow-none focus:ring-0 focus:ring-transparent w-full p-2 mb-4 rounded-lg focus:outline-none" />
+                        </div>
+                        <div className="other-container">
+                            <label className="block text-sm mb-2 font-medium">Tell us a bit about yourself</label>
+                            <textarea type="text" placeholder="Tell us your story and interests to attract the right people." rows="4"  className="resize-none  border focus:shadow-none focus:ring-0 focus:ring-transparent w-full p-2 mb-4 rounded-lg focus:outline-none" />
                         </div>
                     </div>
-                </aside>
-
-                {/* Main Content */}
-                <main className="w-full  lg:w-4/5 mt-6 lg:mt-0 lg:ml-8">
-                    <div className="profile-cards grid gap-6 w-full max-w-[1200px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-                        {profiles.map(profile => (
-                            <ProfileCard key={profile.id} profile={profile} />
-                        ))}
-                    </div>
-                </main>
-            </div>
+                </div>
+            </main>
         </div>
     );
-};
+}
 
-export default Search;
+export default EditPofile;
