@@ -15,6 +15,7 @@ import Member from './Pages/Member';
 import Chat from './Pages/Chat';
 import Profiles from './Pages/Profiles';
 import EditProfile from './Pages/EditProfile';
+import FavoritesContext from './Pages/Components/Context/FavoritesContext'
 function App() {
   return (
     <Router>
@@ -30,7 +31,7 @@ function App() {
         <Route path="/UserDetail" element={<UserDetail />} />
         <Route path="/Search" element={<Search />} />
         <Route path="/Phone" element={<Phone />} />
-        <Route path="/Member" element={<Member />} />
+        <Route path="/Member/:userId" element={<Member />} />
         <Route path="/Footer" element={<Footer />} />
         <Route path="/Chat" element={<Chat />} />
         <Route path="/Profiles" element={<Profiles />} />

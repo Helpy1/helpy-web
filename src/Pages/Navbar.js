@@ -1,14 +1,43 @@
-import React, { useState, Fragment } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import navlogo from '../Assets/logo-white.png';
 import { FaSistrix, FaHeart, FaMessage } from 'react-icons/fa6';
-import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
-import { ChevronDownIcon } from '@heroicons/react/20/solid'
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
+import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { auth, signOut } from "../firebase/firebase-config";
 import { useNavigate } from 'react-router-dom';
 
-const Navbar = ({ profileImage, name,onSearchClick }) => {
+const Navbar = ({onSearchClick }) => {
   const navigate = useNavigate();
+
+  const [profileImage, setProfileImage] = useState('');
+  const [name, setName] = useState('');
+
+  useEffect(() => {
+    // Retrieve data from localStorage on component mount
+    const savedName = localStorage.getItem('name');
+    const savedUID = localStorage.getItem('uid');
+    const savedProfileImage = localStorage.getItem('profileImage');
+    const savedDBID = localStorage.getItem('dbID');
+    const savedGender = localStorage.getItem('gender');
+    const savedSexuality = localStorage.getItem('sexuality');
+
+    // Log data to console
+    //console.log("Retrieved Data from LocalStorage:");
+    //console.log("Name:", savedName);
+    //console.log("UID:", savedUID);
+    //console.log("Profile Image:", savedProfileImage);
+    //console.log("DB ID:", savedDBID);
+    console.log("Gender:", savedGender);
+    console.log("Sexuality:", savedSexuality);
+
+    setName(savedName);
+    setProfileImage(savedProfileImage);
+}, []);
+  
+  console.log(profileImage)
+  console.log(name)
+  
   const handleLogout = async () => {
     try {
       await signOut(auth);

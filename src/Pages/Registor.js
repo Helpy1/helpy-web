@@ -5,6 +5,8 @@ import { auth } from "../firebase/firebase-config"; // Import the auth object fr
 import darkLogo from '../Assets/HelpyUpdatedLoog.png';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { FaArrowLeft } from 'react-icons/fa6';
+import Api_Config from '../Api_Config';
+import CustomAlert from './Components/CustomAlert';
 
 function Register() {
     const INITIAL_LOGIN_OBJ = {
@@ -18,16 +20,34 @@ function Register() {
     const [loginObj, setLoginObj] = useState(INITIAL_LOGIN_OBJ);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
+    const [alertMessage, setAlertMessage] = useState('');
+    const [alertVisible, setAlertVisible] = useState(false);
 
     const submitForm = async (e) => {
         e.preventDefault();
         setErrorMessage('');
 
         // Validate form inputs
-        if (loginObj.emailId.trim() === '') return setErrorMessage('Email Id is required! (use any value)');
-        if (loginObj.password.trim() === '') return setErrorMessage('Password is required! (use any value)');
-        if (loginObj.confirm.trim() === '') return setErrorMessage('Confirm password is required! (use any value)');
-        if (loginObj.password !== loginObj.confirm) return setErrorMessage('Passwords do not match!');
+        if (loginObj.emailId.trim() === '') {
+            setAlertMessage('Email Id is required!');
+            setAlertVisible(true);
+            return;
+        }
+        if (loginObj.password.trim() === '') {
+            setAlertMessage('Password is required!');
+            setAlertVisible(true);
+            return;
+        }
+        if (loginObj.confirm.trim() === '') {
+            setAlertMessage('Confirm password is required!');
+            setAlertVisible(true);
+            return;
+        }
+        if (loginObj.password !== loginObj.confirm) {
+            setAlertMessage('Passwords do not match!');
+            setAlertVisible(true);
+            return;
+        }
         
         try {
             setLoading(true);
@@ -36,12 +56,13 @@ function Register() {
             console.log("User registered:", userCredential.user);
 
             // Save a dummy token or use Firebase's user object in local storage if required
-            localStorage.setItem('token', 'DumyTokenHere');
-            
+            localStorage.setItem('token', 'DummyTokenHere');
+
             // Redirect user to the welcome page after registration
             window.location.href = '/login';
         } catch (error) {
-            setErrorMessage(error.message);
+            setAlertMessage(`Registration failed: ${error.message}`);
+            setAlertVisible(true);
         } finally {
             setLoading(false);
         }
@@ -60,6 +81,11 @@ function Register() {
         setIsConfirmPasswordVisible(!isConfirmPasswordVisible);
     };
 
+    const handleCloseAlert = () => {
+        setAlertVisible(false);
+        setAlertMessage('');
+    };
+
     return (
         <div className="min-h-screen bg-base-200 flex items-center">
             <Link to="/" className="absolute top-4 left-6 inline-block bg-white rounded-[100%] p-3">
@@ -73,7 +99,7 @@ function Register() {
                             <div className="relative mt-4">
                                 <input
                                     type="email"
-                                    defaultValue={loginObj.emailId}
+                                    value={loginObj.emailId}
                                     placeholder="Enter your email"
                                     className="w-full border border-gray-300 rounded-[16px] px-4 py-2 text-gray-700 focus:outline-none focus:ring focus:ring-blue-200"
                                     onChange={(e) => updateFormValue({ updateType: 'emailId', value: e.target.value })}
@@ -83,7 +109,7 @@ function Register() {
                             <div className="relative mt-4">
                                 <input
                                     type={isPasswordVisible ? 'text' : 'password'}
-                                    defaultValue={loginObj.password}
+                                    value={loginObj.password}
                                     placeholder="Enter your password"
                                     className="w-full border border-gray-300 rounded-[16px] px-4 py-2 text-gray-700 focus:outline-none focus:ring focus:ring-blue-200"
                                     onChange={(e) => updateFormValue({ updateType: 'password', value: e.target.value })}
@@ -99,7 +125,7 @@ function Register() {
                             <div className="relative mt-4">
                                 <input
                                     type={isConfirmPasswordVisible ? 'text' : 'password'}
-                                    defaultValue={loginObj.confirm}
+                                    value={loginObj.confirm}
                                     placeholder="Confirm your password"
                                     className="w-full border border-gray-300 rounded-[16px] px-4 py-2 text-gray-700 focus:outline-none focus:ring focus:ring-blue-200"
                                     onChange={(e) => updateFormValue({ updateType: 'confirm', value: e.target.value })}
@@ -112,16 +138,21 @@ function Register() {
                                 </span>
                             </div>
                         </div>
-                        {errorMessage && <p className="text-red-500 text-center mb-4">{errorMessage}</p>}
                         <button
                             type="submit"
                             className={'py-3 px-2 mt-2 w-full rounded-[30px] hover:bg-[#f86a82] text-white bg-[#e9677b]' + (loading ? ' loading' : '')}
                         >
-                            submit
+                            Submit
                         </button>
                     </form>
                 </div>
             </div>
+            <CustomAlert
+                isVisible={alertVisible}
+                onClose={handleCloseAlert}
+                animationSource={require('../Assets/Animations/Animation - 1728995823405.json')}
+                message={alertMessage}
+            />
         </div>
     );
 }

@@ -3,54 +3,110 @@ import ProfileCard from '../Pages/Components/Cards/ProfileCard';
 import Navbar from '../Pages/Navbar';
 import Footer from './Footer';
 import { useLocation, useNavigate } from 'react-router-dom';
-
+import API_CONFIG from '../Api_Config'
+import CustomLoader from './Components/CustomLoader'
 const Home = () => {
     const [profiles, setProfiles] = useState([]);
     const location = useLocation();
     const navigate = useNavigate();
     const data = location.state?.data;
+    console.log("Data is = ", data)
     const [gender, setGender] = useState('');
     const [Name, setName] = useState('');
     const [DBid, setDBid] = useState('');
     const [sexuality, setSexuality] = useState('');
+    const [isLoading, setIsLoading] = useState(true); // State for loader
     const [profileImage, setProfileImage] = useState('');
 
+    // useEffect(() => {
+    //     if (data && data.length > 0) {
+    //         const firstUser = data[0].users;
+    //         setName(firstUser.fullName);
+    //         setDBid(data[0].userDetails.id);
+    //         setGender(firstUser.gender);
+    //         setSexuality(firstUser.sexuality);
+
+    //         const profileImageData = data.find(item => item.image?.name === "Profile_image");
+    //         const profileImageLink = profileImageData ? profileImageData.image.imageLink : '';
+
+    //         // Save to localStorage
+    //         localStorage.setItem('name', firstUser.fullName);
+    //         localStorage.setItem('uid', data[0].users.uGuid);
+    //         localStorage.setItem('profileImage', profileImageLink);
+    //         localStorage.setItem('dbID', data[0].users.id);
+    //         localStorage.setItem('gender', firstUser.gender);
+    //         localStorage.setItem('sexuality', firstUser.sexuality);
+
+    //         // Update state
+    //         setProfileImage(profileImageLink);
+    //         console.log("Data saved in LocalStorage");
+    //     }
+    // }, [data]);
+
+
     useEffect(() => {
+        let retrievedGender = gender;
+        let retrievedSexuality = sexuality;
+        let retrievedName = Name;
+        let retrievedImage = profileImage;
+
+        // Check and retrieve from `data` or `localStorage`
         if (data && data.length > 0) {
             const firstUser = data[0].users;
-            setName(firstUser.fullName)
-            setDBid(data[0].userDetails.id)
-            setGender(firstUser.gender);
-            setSexuality(firstUser.sexuality);
+            retrievedName = firstUser.fullName;
+            retrievedGender = firstUser.gender;
+            retrievedSexuality = firstUser.sexuality;
 
-            const profileImageData = data.find(item => item.image?.name === "profile_image");
-            if (profileImageData) {
-                setProfileImage(profileImageData.image.imageLink);
-            }
+            const profileImageData = data.find(item => item.image?.name === "Profile_image");
+            retrievedImage = profileImageData ? profileImageData.image.imageLink : '';
+
+            // Save to localStorage
+            localStorage.setItem('name', retrievedName);
+            localStorage.setItem('uid', data[0].users.uGuid);
+            localStorage.setItem('profileImage', retrievedImage);
+            localStorage.setItem('dbID', data[0].users.id);
+            localStorage.setItem('gender', retrievedGender);
+            localStorage.setItem('sexuality', retrievedSexuality);
+
+            console.log("Data saved in LocalStorage");
+        } else {
+            // Retrieve from localStorage if `data` is not provided
+            retrievedName = localStorage.getItem('name') || '';
+            retrievedGender = localStorage.getItem('gender') || '';
+            retrievedSexuality = localStorage.getItem('sexuality') || '';
+            retrievedImage = localStorage.getItem('profileImage') || '';
         }
+
+        // Update state
+        setName(retrievedName);
+        setGender(retrievedGender);
+        setSexuality(retrievedSexuality);
+        setProfileImage(retrievedImage);
     }, [data]);
 
-    console.log("Profile Image Link = ",profileImage)
+
+
+    console.log("gender in Home = ", gender)
+    console.log("sexuality in Home = ", sexuality)
 
     useEffect(() => {
         if (gender && sexuality) {
-            fetch(`https://usamaanwar-001-site1.atempurl.com/GetAllUsers?gender=${gender}&sexuality=${sexuality}`)
+            setIsLoading(true); // Start loading
+            fetch(`${API_CONFIG.BASE_URL}/GetAllUsers?gender=${gender}&sexuality=${sexuality}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+                },
+            })
                 .then(response => response.json())
                 .then(data => {
-                    console.log("Data from Api  = ",data)
-                    const formattedProfiles = data.map(user => ({
-                        id: user.userId,
-                        name: user.fullName,
-                        age: user.age,
-                        location: `${user.city}, ${user.country}`,
-                        image: user.imagePaths[0], // Display the first image
-                        newMember: user.isActive,
-                        online: user.userStatus,
-                        bills:user.bills
-                    }));
-                    setProfiles(formattedProfiles);
+                    //console.log("Data from API = ", data);
+                    setProfiles(data);
                 })
-                .catch(error => console.error('Error fetching user data:', error));
+                .catch(error => console.error('Error fetching user data:', error))
+                .finally(() => setIsLoading(false)); // Stop loading
         }
     }, [gender, sexuality]);
 
@@ -60,14 +116,18 @@ const Home = () => {
 
     return (
         <div>
-            <Navbar profileImage={profileImage} name={Name} onSearchClick={handleSearchClick}/>
-            <div className="home flex justify-center p-8">
-                <div className="profile-cards grid gap-6 w-full max-w-[1200px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {profiles.map(profile => (
-                        <ProfileCard key={profile.id} profile={profile} />
-                    ))}
+            <Navbar profileImage={profileImage} name={Name} onSearchClick={handleSearchClick} />
+            {isLoading ? ( // Show loader if isLoading is true
+                <CustomLoader isVisible={isLoading} />
+            ) : (
+                <div className="home flex justify-center p-8">
+                    <div className="profile-cards grid gap-6 w-full max-w-[1200px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {profiles.map(profile => (
+                            <ProfileCard key={profile.id} profile={profile} />
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
             <Footer />
         </div>
     );

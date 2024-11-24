@@ -6,6 +6,8 @@ import darkLogo from '../Assets/HelpyUpdatedLoog.png';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { FaArrowLeft } from 'react-icons/fa6';
 import { useNavigate } from 'react-router-dom';
+import CustomAlert from './Components/CustomAlert'
+import API_CONFIG from '../Api_Config'
 function Login() {
     const INITIAL_LOGIN_OBJ = {
         password: '',
@@ -17,21 +19,30 @@ function Login() {
     const [errorMessage, setErrorMessage] = useState('');
     const [loginObj, setLoginObj] = useState(INITIAL_LOGIN_OBJ);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+    const [alertMessage, setAlertMessage] = useState('');
+    const [alertVisible, setAlertVisible] = useState(false);
     const [userUID, setuserUID] = useState("")
+
+
     const submitForm = async (e) => {
         e.preventDefault();
         setErrorMessage('');
 
         // Validate email and password
-        if (loginObj.emailId.trim() === '') return setErrorMessage('Email Id is required! (use any value)');
-        if (loginObj.password.trim() === '') return setErrorMessage('Password is required! (use any value)');
+        if (loginObj.emailId.trim() === '') {
+            setAlertMessage('Email Id is required!');
+            setAlertVisible(true);
+            return;
+        }
+        if (loginObj.password.trim() === '') {
+            setAlertMessage('Password is required!');
+            setAlertVisible(true);
+            return;
+        }
 
         try {
             // Log in the user using Firebase Authentication
             const userCredential = await signInWithEmailAndPassword(auth, loginObj.emailId, loginObj.password);
-            //console.log("User logged in:", userCredential.user);
-            //console.log("User email  in:", userCredential.user.email);
-            // Extract user UID and email
             const userUID = userCredential.user.uid;
             const email = userCredential.user.email;
 
@@ -42,24 +53,39 @@ function Login() {
                 logintype: 'email'
             };
 
-            // Make GET request to the external API
-            const response = await fetch(`https://usamaanwar-001-site1.atempurl.com/api/account/GetUserDetail?uGuid=${userUID}`);
+            console.log("User UID  = ", userDetails.userUID);
+
+            const response = await fetch(
+                `${API_CONFIG.BASE_URL}/api/account/GetUserDetail?uGuid=${userDetails.userUID}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': '/',
+                        'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+                    },
+                }
+            );
 
             if (response.status === 200) {
                 const userData = await response.json(); // Parse response data as JSON
-
-                // Navigate to 'Home' with userData if request is successful
                 navigate('/Home', { state: { data: userData } });
             } else {
-                navigate('/UserDetail', { state: userDetails });
-                console.log("Data send ")
-                // Handle cases where the response is not 200
-                setErrorMessage('Failed to retrieve user details.');
+                navigate('/UserDetail', { state: { userData: userDetails } });
+                setAlertMessage('User details not found, please update your profile.');
+                setAlertVisible(true);
             }
         } catch (error) {
-            setErrorMessage(error.message);
+            setAlertMessage(`Login failed: ${error.message}`);
+            setAlertVisible(true);
         }
     };
+
+    const handleCloseAlert = () => {
+        setAlertVisible(false);
+        setAlertMessage('');
+    };
+
 
     const updateFormValue = ({ updateType, value }) => {
         setErrorMessage('');
@@ -115,6 +141,12 @@ function Login() {
                     </form>
                 </div>
             </div>
+            <CustomAlert
+                isVisible={alertVisible}
+                onClose={handleCloseAlert}
+                animationSource={require('../Assets/Animations/Animation - 1728995823405.json')}
+                message={alertMessage}
+            />
         </div>
     );
 }
