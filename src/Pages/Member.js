@@ -271,7 +271,7 @@ const Member = () => {
                     <div className="w-full bg-white rounded-lg shadow-md p-6 relative">
                         <div>
                             <h2 className="text-[#e9677b] text-lg font-semibold mb-2">{userData.gender === 'Men' ? 'Bills I can Help with' : 'Bills I need Help with'}</h2>
-                            <div className="grid grid-cols-2 gap-0 text-gray-800 pl-4">
+                            <div className="grid grid-cols-4 gap-0 text-gray-800 pl-4">
                                 {userData.bills.map((bill, index) => (
                                     <InterestButton key={index} interest={bill} />
                                 ))}

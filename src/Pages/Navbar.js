@@ -62,7 +62,7 @@ const Navbar = ({onSearchClick }) => {
               <li>
                 <div
                 onClick={onSearchClick}
-                  className="flex flex-col gap-2 items-center justify-center py-2 px-3 md:p-0 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent text-center md:hover:text-blue-700 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700"
+                  className="flex flex-col gap-2 items-center justify-center py-2 px-3 md:p-0 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent text-center md:hover:text-[#e9677b] dark:text-white md:dark:hover:text-[#e9677b] dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700"
                 >
                   <FaSistrix />
                   <span>Search</span>
@@ -71,7 +71,7 @@ const Navbar = ({onSearchClick }) => {
               <li>
                 <Link
                   to="/Interest"
-                  className="flex flex-col gap-2 items-center justify-center py-2 px-3 md:p-0 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent text-center md:hover:text-blue-700 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700"
+                  className="flex flex-col gap-2 items-center justify-center py-2 px-3 md:p-0 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent text-center md:hover:text-[#e9677b] dark:text-white md:dark:hover:text-[#e9677b] dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700"
                 >
                   <FaHeart />
                   <span>Interests</span>
@@ -80,7 +80,7 @@ const Navbar = ({onSearchClick }) => {
               <li>
                 <Link
                   to="/services"
-                  className="flex flex-col gap-2 items-center justify-center py-2 px-3 md:p-0 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent text-center md:hover:text-blue-700 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700"
+                  className="flex flex-col gap-2 items-center justify-center py-2 px-3 md:p-0 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent text-center md:hover:text-[#e9677b] dark:text-white md:dark:hover:text-[#e9677b] dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700"
                 >
                   <FaMessage />
                   <span>Messages</span>
@@ -111,30 +111,30 @@ const Navbar = ({onSearchClick }) => {
                       <MenuItem>
                         {({ active }) => (
                           <a
-                            href="#"
-                            className={`block px-4 py-2 text-sm ${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'}`}
-                          >
-                            Edit Profile
-                          </a>
-                        )}
-                      </MenuItem>
-                      <MenuItem>
-                        {({ active }) => (
-                          <a
-                            href="#"
+                            href="/Profiles"
                             className={`block px-4 py-2 text-sm ${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'}`}
                           >
                             View Profile
                           </a>
                         )}
                       </MenuItem>
+                      {/* <MenuItem>
+                        {({ active }) => (
+                          <a
+                            href="/EditProfile"
+                            className={`block px-4 py-2 text-sm ${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'}`}
+                          >
+                            Edit Profile
+                          </a>
+                        )}
+                      </MenuItem> */}
                       <MenuItem>
                         {({ active }) => (
                           <a
                             href="#"
                             className={`block px-4 py-2 text-sm ${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'}`}
                           >
-                            Boost Your Profile
+                            Upgrade to Premium
                           </a>
                         )}
                       </MenuItem>
@@ -148,27 +148,7 @@ const Navbar = ({onSearchClick }) => {
                             href="#"
                             className={`block px-4 py-2 text-sm ${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'}`}
                           >
-                            Get ID Verified
-                          </a>
-                        )}
-                      </MenuItem>
-                      <MenuItem>
-                        {({ active }) => (
-                          <a
-                            href="#"
-                            className={`block px-4 py-2 text-sm ${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'}`}
-                          >
-                            Settings
-                          </a>
-                        )}
-                      </MenuItem>
-                      <MenuItem>
-                        {({ active }) => (
-                          <a
-                            href="#"
-                            className={`block px-4 py-2 text-sm ${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'}`}
-                          >
-                            Help Center
+                            Get Account Verified
                           </a>
                         )}
                       </MenuItem>

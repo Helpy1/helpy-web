@@ -3,46 +3,21 @@ import ProfileCard from '../Pages/Components/Cards/ProfileCard';
 import Navbar from '../Pages/Navbar';
 import Footer from './Footer';
 import { useLocation, useNavigate } from 'react-router-dom';
-import API_CONFIG from '../Api_Config'
-import CustomLoader from './Components/CustomLoader'
+import API_CONFIG from '../Api_Config';
+import CustomLoader from './Components/CustomLoader';
+
 const Home = () => {
     const [profiles, setProfiles] = useState([]);
+    const [visibleProfiles, setVisibleProfiles] = useState(20); // Number of profiles to display initially
     const location = useLocation();
     const navigate = useNavigate();
     const data = location.state?.data;
-    console.log("Data is = ", data)
     const [gender, setGender] = useState('');
     const [Name, setName] = useState('');
     const [DBid, setDBid] = useState('');
     const [sexuality, setSexuality] = useState('');
     const [isLoading, setIsLoading] = useState(true); // State for loader
     const [profileImage, setProfileImage] = useState('');
-
-    // useEffect(() => {
-    //     if (data && data.length > 0) {
-    //         const firstUser = data[0].users;
-    //         setName(firstUser.fullName);
-    //         setDBid(data[0].userDetails.id);
-    //         setGender(firstUser.gender);
-    //         setSexuality(firstUser.sexuality);
-
-    //         const profileImageData = data.find(item => item.image?.name === "Profile_image");
-    //         const profileImageLink = profileImageData ? profileImageData.image.imageLink : '';
-
-    //         // Save to localStorage
-    //         localStorage.setItem('name', firstUser.fullName);
-    //         localStorage.setItem('uid', data[0].users.uGuid);
-    //         localStorage.setItem('profileImage', profileImageLink);
-    //         localStorage.setItem('dbID', data[0].users.id);
-    //         localStorage.setItem('gender', firstUser.gender);
-    //         localStorage.setItem('sexuality', firstUser.sexuality);
-
-    //         // Update state
-    //         setProfileImage(profileImageLink);
-    //         console.log("Data saved in LocalStorage");
-    //     }
-    // }, [data]);
-
 
     useEffect(() => {
         let retrievedGender = gender;
@@ -84,11 +59,6 @@ const Home = () => {
         setProfileImage(retrievedImage);
     }, [data]);
 
-
-
-    console.log("gender in Home = ", gender)
-    console.log("sexuality in Home = ", sexuality)
-
     useEffect(() => {
         if (gender && sexuality) {
             setIsLoading(true); // Start loading
@@ -102,8 +72,8 @@ const Home = () => {
             })
                 .then(response => response.json())
                 .then(data => {
-                    //console.log("Data from API = ", data);
-                    setProfiles(data);
+                    const shuffledData = data.sort(() => Math.random() - 0.5);
+                    setProfiles(shuffledData); // Update profiles state with shuffled data
                 })
                 .catch(error => console.error('Error fetching user data:', error))
                 .finally(() => setIsLoading(false)); // Stop loading
@@ -114,18 +84,30 @@ const Home = () => {
         navigate('/search', { state: { profiles } });
     };
 
+    const handleShowMore = () => {
+        setVisibleProfiles((prev) => prev + 20); // Load 30 more profiles
+    };
+
     return (
         <div>
             <Navbar profileImage={profileImage} name={Name} onSearchClick={handleSearchClick} />
-            {isLoading ? ( // Show loader if isLoading is true
+            {isLoading ? (
                 <CustomLoader isVisible={isLoading} />
             ) : (
-                <div className="home flex justify-center p-8">
+                <div className="home flex flex-col justify-center items-center p-8">
                     <div className="profile-cards grid gap-6 w-full max-w-[1200px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {profiles.map(profile => (
+                        {profiles.slice(0, visibleProfiles).map(profile => (
                             <ProfileCard key={profile.id} profile={profile} />
                         ))}
                     </div>
+                    {visibleProfiles < profiles.length && (
+                        <button
+                            onClick={handleShowMore}
+                            className="mt-6 px-4 py-2 rounded-full bg-[#e9677b] text-white rounded hover:bg-[#e9677b]"
+                        >
+                            Show More
+                        </button>
+                    )}
                 </div>
             )}
             <Footer />
