@@ -46,6 +46,41 @@ const Member = () => {
 
 
     const isFilled = favoriteItems[userData?.userId] || false;
+    const MemberID = userData.userId
+
+    
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+          try {
+            console.log("Sending view request for user:", MemberID);
+            console.log("Sending view request from user:", dbid);
+    
+            const url = `${API_CONFIG.BASE_URL}/api/AddViewUser?userId=${MemberID}&ViewUserId=${dbid}`;
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': '/',
+                'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+              },
+            });
+    
+            if (response.ok) {
+              const result = await response.json();
+              console.log('View recorded:', result);
+            } else {
+              console.error('Failed to record view:', response.status);
+            }
+    
+          } catch (error) {
+            console.error('Error recording view or fetching token:', error);
+          }
+        }, 3000); // 3 seconds
+    
+        return () => clearTimeout(timer);
+      }, [dbid, MemberID]); // Add `name` to dependency array
+
+
 
     const handleHeartClick = async (e) => {
         e.stopPropagation(); // Prevent parent click event

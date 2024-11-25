@@ -18,9 +18,10 @@ import CustomLoader from './Components/CustomLoader'
 function UserDetail() {
     const location = useLocation();
     const navigate = useNavigate(); // Initialize navigate
-    const { userUID, logintype, userData } = location.state || {};
+    const { logintype, userData } = location.state || {};
+    console.log("Received location.state:", location.state);
     console.log("Login Type = ", logintype)
-    console.log("userUID = ", userData.userUID)
+    console.log("userUID = ", userData)
     console.log("userData = ", userData)
     //console.log("userData in UserDetails= ", userData)
     const [isLoading, setIsLoading] = useState(true); // State for loader
@@ -141,7 +142,7 @@ function UserDetail() {
         const response = await fetch(uri);
         const blob = await response.blob();
 
-        const storageRef = ref(storage, `Images/${userUID}/${imageName}`);
+        const storageRef = ref(storage, `Images/${userData.userUID}/${imageName}`);
         const uploadTask = uploadBytesResumable(storageRef, blob);
 
         return new Promise((resolve, reject) => {
@@ -437,7 +438,7 @@ function UserDetail() {
             return;
         }
 
-        const uGuid = userData ? userData.uid : userUID;  // Set uGuid based on condition
+        //const uGuid = userData ? userData.uid : userData.userUID;  // Set uGuid based on condition
         //setIsLoading(true); // Show loader before form submission starts
         try {
             const formData = {
@@ -474,6 +475,7 @@ function UserDetail() {
                 lookingFor: lookingfor || 'string'
             };
 
+            console.log("formData = ",formData)
             // Submit form data
             const response = await fetch(`${API_CONFIG.BASE_URL}/api/account/registerthirdpartyuser`, {
                 method: 'POST',

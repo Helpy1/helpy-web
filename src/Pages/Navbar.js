@@ -26,10 +26,10 @@ const Navbar = ({onSearchClick }) => {
     //console.log("Retrieved Data from LocalStorage:");
     //console.log("Name:", savedName);
     //console.log("UID:", savedUID);
-    //console.log("Profile Image:", savedProfileImage);
+    console.log("Profile Image:", savedProfileImage);
     //console.log("DB ID:", savedDBID);
-    console.log("Gender:", savedGender);
-    console.log("Sexuality:", savedSexuality);
+    //console.log("Gender:", savedGender);
+    //console.log("Sexuality:", savedSexuality);
 
     setName(savedName);
     setProfileImage(savedProfileImage);
@@ -40,6 +40,8 @@ const Navbar = ({onSearchClick }) => {
   
   const handleLogout = async () => {
     try {
+      localStorage.clear();
+      console.log("empty localStorage");
       await signOut(auth);
       console.log("User signed out");
       navigate('/'); // Replace '/splash' with your actual splash screen route

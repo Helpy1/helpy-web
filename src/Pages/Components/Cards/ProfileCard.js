@@ -84,7 +84,7 @@ const ProfileCard = ({ profile }) => {
 
 
 
-    console.log("Profiles are = ", profileImage)
+    //console.log("Profiles are = ", profileImage)
 
     const handleCardClick = () => {
         if (profile.userId) { // Assuming `profile` is a single object

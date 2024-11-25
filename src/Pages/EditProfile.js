@@ -151,72 +151,11 @@ function EditPofile() {
             <div className="flex flex-col lg:flex-row w-full max-w-[1400px] m-auto h-full p-4 gap-8">
                 <aside className='w-full w-100% lg:w-[30%]'>
                     <div className='relative'>
-                        <span className="bg-blue-800 text-white text-xs font-medium absolute right-[14px] top-[12px] px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
-
-                            PREMIUM</span>
                         <img
                             alt='Profile Pic'
                             src={userData.imagePaths[0]}
                             className="w-full h-96 object-cover object-center rounded-md"
                         />
-                        <div onClick={toggleHeart} className="cursor-pointer absolute right-[16px] bottom-[16px]">
-                            {isFilled ? (
-                                <FaHeart className="text-red-500 w-8 h-8" />
-                            ) : (
-                                <FaRegHeart className="text-white w-8 h-8" />
-                            )}
-                        </div>
-                    </div>
-                    <div className="w-full bg-white shadow-md rounded-lg px-4 py-5  mt-6">
-                        {/* Profile Details */}
-                        <div className="flex flex-row justify-between">
-                            <div className=" flex-grow-[1] flex-shrink-[1] items-center justify-start flex gap-2"><GiBodyHeight /><span >{(userData.heightInInches * 0.0833333).toFixed(1)}</span></div>
-                            <div className=" flex-grow-[1] flex-shrink-[1] items-center justify-center flex gap-1"><IoMdMan /><span>{userData.bodyType}</span></div>
-                            <div className=" flex-grow-[1] flex-shrink-[1] items-center justify-end flex gap-2"><FaHeart /><span>{userData.relationshipStatus}</span></div>
-                        </div>
-                    </div>
-                    <div className="w-full bg-white shadow-md rounded-lg px-4 py-6  mt-4">
-                        {/* Active Status and Location */}
-                        <div className="flex items-center  justify-between gap-3">
-                            <div className="flex items-start gap-2">
-                                <span className='relative top-1'><FaBell /></span>
-                                <span className='text-sm'>{userData.lastActive}</span>
-                            </div>
-
-                            <div className="flex items-start gap-2">
-                                <span className='relative top-1'><FaLocationDot /></span>
-                                <span className='text-sm'>{userData.city}, {userData.country}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="w-full bg-white shadow-md rounded-lg px-4 py-6  mt-4">
-                        {/* Active Status and Location */}
-                        <div className="flex items-center  justify-between gap-3">
-                            <div className="flex items-start gap-2">
-                                <span className='relative top-[2px]'><FaHouse /></span>
-                                <span className='text-base'>{userData.city}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="w-full bg-white shadow-md rounded-lg px-4 py-6  mt-4 ">
-                        <div className="flex items-center  justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                                <span className='relative '><FaUserClock /></span>
-                                <span className='text-base'>Member Since</span>
-                            </div>
-                            <span className='text-base'>
-                                {new Date(userData.createdDate).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'short',
-                                    day: '2-digit'
-                                })}
-                            </span>
-                        </div>
-                        <hr className="border-t-1 border-gray-200 my-4"></hr>
-                        <div className="flex items-center mb-1 gap-2">
-                            <h1 className="text-base font-medium">Verifications</h1>
-                            <MdVerified className='text-[#4A90E2]' />
-                        </div>
                     </div>
                 </aside>
                 <main className="w-full lg:w-[70%] mt-6 lg:mt-0 ">

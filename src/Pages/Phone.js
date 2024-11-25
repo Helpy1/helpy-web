@@ -1,80 +1,149 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import PhoneInput from 'react-phone-input-2';
-import 'react-phone-input-2/lib/style.css'; 
-import darkLogo from '../Assets/Logo-dark.png';
+import 'react-phone-input-2/lib/style.css';
+import darkLogo from '../Assets/HelpyUpdatedLoog.png';
 import { FaArrowLeft } from 'react-icons/fa6';
-import { auth, signInWithPhoneNumber, RecaptchaVerifier } from "../firebase/firebase-config";
-
+import { RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
+import { auth } from "../firebase/firebase-config";
+import API_CONFIG from '../Api_Config'
+import { useNavigate } from 'react-router-dom';
 function Phone() {
     const INITIAL_LOGIN_OBJ = {
         phoneNumber: '',
         otp: '',
     };
-
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [loginObj, setLoginObj] = useState(INITIAL_LOGIN_OBJ);
     const [isOtpSent, setIsOtpSent] = useState(false);
     const [verificationId, setVerificationId] = useState(null);
-
+    const [uid, setUid] = useState('');
     const setupRecaptcha = () => {
-        window.recaptchaVerifier = new RecaptchaVerifier(
-            "recaptcha-container",
-            {
-                size: "invisible",
-                callback: (response) => {
-                    console.log("Recaptcha verified");
-                },
-            },
-            auth // Pass the initialized auth object here
-        );
+        if (!window.recaptchaVerifier) {
+            window.recaptchaVerifier = new RecaptchaVerifier(
+                auth,
+                'recaptcha-container',
+                {
+                    size: 'invisible',
+                    callback: (response) => {
+                        window.recaptchaVerifier.reset();
+                    },
+                    'expired-callback': () => { },
+                }
+            );
+        }
     };
+
+
+
 
     const sendOtp = async (e) => {
         e.preventDefault();
         setErrorMessage('');
-        
+
         if (loginObj.phoneNumber.trim() === '') {
             return setErrorMessage('Phone number is required!');
         }
-        
+
         setLoading(true);
-        setupRecaptcha();
-        const appVerifier = window.recaptchaVerifier;
-        
+
         try {
+            // Set up reCAPTCHA
+            setupRecaptcha();
+            const appVerifier = window.recaptchaVerifier;
+
+            // Send OTP
             const confirmationResult = await signInWithPhoneNumber(auth, `+${loginObj.phoneNumber}`, appVerifier);
             setVerificationId(confirmationResult.verificationId);
             setIsOtpSent(true);
-            setLoading(false);
-            console.log("OTP sent");
+            console.log("OTP sent successfully");
         } catch (error) {
             console.error("Error during OTP sending:", error);
             setErrorMessage("Failed to send OTP. Please try again.");
+        } finally {
             setLoading(false);
         }
     };
 
+    const fetchUserData = async (userID) => {
+
+        // Define userDetails object with basic information
+        const userDetails = {
+            userUID: userID,
+            phoneNumber: loginObj.phoneNumber,
+            logintype: 'phone',
+        };
+
+        console.log("User Details = ",userDetails)
+
+
+        try {
+            const apiResponse = await fetch(`${API_CONFIG.BASE_URL}/api/account/GetUserDetail?uGuid=${userDetails.userUID}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': '/',
+                    'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+                },
+            });
+
+            if (apiResponse.ok) {
+                // If API call succeeds, parse the response data
+                const apiData = await apiResponse.json();
+                const userData = { ...apiData };
+                console.log("userData = ",userData)
+                console.log(" Get data goint to Home")
+                navigate('/Home', { state: { data: userData } });
+                
+            } else {
+                console.log("Not Get data goint to UserDetail")
+                // If API call fails, navigate to UserDetail with userDetails
+                console.log("User Details before sending = ",userDetails)
+                navigate('/UserDetail', { state: { logintype: userDetails.logintype, userData: userDetails } });
+            }
+        } catch (error) {
+            console.error("Fetch user data error:", error);
+
+            // If there's an error, default to UserDetail
+            //navigate('/UserDetail', { state: { data: userDetails } });
+        }
+    };
+
+
+
+
     const verifyOtp = async (e) => {
         e.preventDefault();
         setErrorMessage('');
-        
+
         if (loginObj.otp.trim() === '') {
             return setErrorMessage('OTP is required!');
         }
-        
+
+        setLoading(true);
+
         try {
-            const credential = auth.PhoneAuthProvider.credential(verificationId, loginObj.otp);
-            const result = await auth.signInWithCredential(credential);
-            console.log("Phone login successful:", result.user);
-            localStorage.setItem('token', 'DummyTokenHere');
-            window.location.href = '/app/welcome';
+            // Create credential using the verificationId and OTP
+            const credential = PhoneAuthProvider.credential(verificationId, loginObj.otp);
+
+            // Sign in the user
+            const result = await signInWithCredential(auth, credential);
+            console.log("Phone login successful:", result.user.uid);
+            const userID = result.user.uid;
+            setUid(userID);
+
+            // Fetch user data and navigate based on response
+            fetchUserData(userID);
         } catch (error) {
             console.error("Error during OTP verification:", error);
             setErrorMessage("Invalid OTP. Please try again.");
+        } finally {
+            setLoading(false);
         }
     };
+
 
     const updateFormValue = ({ updateType, value }) => {
         setErrorMessage('');
