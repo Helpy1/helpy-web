@@ -74,7 +74,7 @@ const Navbar = ({onSearchClick }) => {
               </li>
               <li>
                 <Link
-                  to="/Interest"
+                  to="/4UAi"
                   className="flex flex-row gap-2 items-center justify-center py-2 px-3 md:p-0 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent text-center md:hover:text-[#e9677b] dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700"
                 >
                   <FaHeart />
@@ -124,7 +124,7 @@ const Navbar = ({onSearchClick }) => {
                       <MenuItem>
                         {({ active }) => (
                           <a
-                            href="#"
+                            href="/Profiles"
                             className={`block px-4 py-2 text-sm ${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'}`}
                           >
                             View Profile

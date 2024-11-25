@@ -16,6 +16,7 @@ import Chat from './Pages/Chat';
 import Profiles from './Pages/Profiles';
 import EditProfile from './Pages/EditProfile';
 import FavoritesContext from './Pages/Components/Context/FavoritesContext'
+import Ai from './Pages/Ai';
 function App() {
   return (
     <Router>
@@ -34,6 +35,7 @@ function App() {
         <Route path="/Member/:userId" element={<Member />} />
         <Route path="/Footer" element={<Footer />} />
         <Route path="/Chat" element={<Chat />} />
+        <Route path="/4UAi" element={<Ai />} />
         <Route path="/Profiles" element={<Profiles />} />
         <Route path="/EditProfile" element={<EditProfile />} />
       </Routes>

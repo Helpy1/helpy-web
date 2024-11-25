@@ -48,37 +48,37 @@ const Member = () => {
     const isFilled = favoriteItems[userData?.userId] || false;
     const MemberID = userData.userId
 
-    
+
     useEffect(() => {
         const timer = setTimeout(async () => {
-          try {
-            console.log("Sending view request for user:", MemberID);
-            console.log("Sending view request from user:", dbid);
-    
-            const url = `${API_CONFIG.BASE_URL}/api/AddViewUser?userId=${MemberID}&ViewUserId=${dbid}`;
-            const response = await fetch(url, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': '/',
-                'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
-              },
-            });
-    
-            if (response.ok) {
-              const result = await response.json();
-              console.log('View recorded:', result);
-            } else {
-              console.error('Failed to record view:', response.status);
+            try {
+                console.log("Sending view request for user:", MemberID);
+                console.log("Sending view request from user:", dbid);
+
+                const url = `${API_CONFIG.BASE_URL}/api/AddViewUser?userId=${MemberID}&ViewUserId=${dbid}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': '/',
+                        'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+                    },
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('View recorded:', result);
+                } else {
+                    console.error('Failed to record view:', response.status);
+                }
+
+            } catch (error) {
+                console.error('Error recording view or fetching token:', error);
             }
-    
-          } catch (error) {
-            console.error('Error recording view or fetching token:', error);
-          }
         }, 3000); // 3 seconds
-    
+
         return () => clearTimeout(timer);
-      }, [dbid, MemberID]); // Add `name` to dependency array
+    }, [dbid, MemberID]); // Add `name` to dependency array
 
 
 
@@ -214,11 +214,11 @@ const Member = () => {
                                 })}
                             </span>
                         </div>
-                        <hr className="border-t-1 border-gray-200 my-4"></hr>
+                        {/* <hr className="border-t-1 border-gray-200 my-4"></hr>
                         <div className="flex items-center mb-1 gap-2">
                             <h1 className="text-base font-medium">Verifications</h1>
                             <MdVerified className='text-[#4A90E2]' />
-                        </div>
+                        </div> */}
                     </div>
                 </aside>
                 <main className="w-full lg:w-[70%] mt-6 lg:mt-0 ">
@@ -228,7 +228,10 @@ const Member = () => {
                             <h1 className="text-2xl font-medium">
                                 {userData.fullName}, {userData.age}
                             </h1>
-                            <MdVerified className="text-2xl text-[#4A90E2]" />
+                            {userData.isProfileVerified && (
+                                <MdVerified className="text-2xl text-[#4A90E2]" />
+                            )}
+
                         </div>
                         <p className="mt-1 text-base">{userData.city}, {userData.country}</p>
                     </div>

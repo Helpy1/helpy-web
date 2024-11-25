@@ -6,7 +6,10 @@ import { MdVerifiedUser, MdWorkspacePremium } from "react-icons/md";
 import { motion } from 'framer-motion';
 import API_CONFIG from '../../../Api_Config'
 import AnimatedHeart from '../AnimatedHeart';
+import { useLocation } from 'react-router-dom';
 import { useFavorites } from '../Context/FavoritesContext';
+import Slider from "rc-slider";
+import 'rc-slider/assets/index.css';
 const ProfileCard = ({ profile }) => {
     const [dbid, setdbid] = useState('')
     const { favoriteItems, updateFavorite } = useFavorites();
@@ -172,7 +175,7 @@ const ProfileCard = ({ profile }) => {
                             {showAnimatedHeart && (
                                 <AnimatedHeart style={{ right: 80, top: -40 }} /> // Positioning animated heart
                             )}
-                           <div onClick={handleHeartClick} className="cursor-pointer">
+                            <div onClick={handleHeartClick} className="cursor-pointer">
                                 {isFilled ? (
                                     <FaHeart className="text-red-500 w-6 h-6" />
                                 ) : (
@@ -188,5 +191,4 @@ const ProfileCard = ({ profile }) => {
         </div>
     );
 };
-
 export default ProfileCard;

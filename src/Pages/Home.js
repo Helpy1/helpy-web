@@ -12,7 +12,7 @@ const Home = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const data = location.state?.data;
-    console.log("data = ",data)
+    console.log("data = ", data)
     const [gender, setGender] = useState('');
     const [Name, setName] = useState('');
     const [DBid, setDBid] = useState('');
@@ -62,8 +62,8 @@ const Home = () => {
         setProfileImage(retrievedImage);
     }, [data]);
 
-        console.log("Gender in Home = : ",gender)
-    console.log("Sexuality in Home = : ",sexuality)
+    console.log("Gender in Home = : ", gender)
+    console.log("Sexuality in Home = : ", sexuality)
 
     useEffect(() => {
         if (gender && sexuality) {
@@ -78,7 +78,7 @@ const Home = () => {
             })
                 .then(response => response.json())
                 .then(data => {
-                    console.log("data in Home from Api is  = ",data)
+                    console.log("data in Home from Api is  = ", data)
                     const shuffledData = data.sort(() => Math.random() - 0.5);
                     setProfiles(shuffledData); // Update profiles state with shuffled data
                 })
