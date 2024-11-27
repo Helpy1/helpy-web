@@ -27,25 +27,44 @@ const Home = () => {
         let retrievedSexuality = sexuality;
         let retrievedName = Name;
         let retrievedImage = profileImage;
-
+        let retrievedUguid = '';
+        let retrievedUserDetailsId = '';
+        let retrievedCity = '';
+        let retrievedCountry = '';
+        let retrievedLongitude = '';
+        let retrievedLatitude = '';
+    
         // Check and retrieve from `data` or `localStorage`
         if (data && data.length > 0) {
             const firstUser = data[0].users;
             retrievedName = firstUser.fullName;
             retrievedGender = firstUser.gender;
             retrievedSexuality = firstUser.sexuality;
-
+    
             const profileImageData = data.find(item => item.image?.name === "Profile_image");
             retrievedImage = profileImageData ? profileImageData.image.imageLink : '';
-
+    
+            // Retrieve additional data
+            retrievedUguid = firstUser.uGuid;
+            retrievedUserDetailsId = data[0].userDetails.userId;
+            retrievedCity = firstUser.city;
+            retrievedCountry = firstUser.country;
+            retrievedLongitude = firstUser.longitude;
+            retrievedLatitude = firstUser.latitude;
+    
             // Save to localStorage
             localStorage.setItem('name', retrievedName);
-            localStorage.setItem('uid', data[0].users.uGuid);
+            localStorage.setItem('uid', retrievedUguid);
             localStorage.setItem('profileImage', retrievedImage);
-            localStorage.setItem('dbID', data[0].users.id);
+            localStorage.setItem('dbID', firstUser.id);
             localStorage.setItem('gender', retrievedGender);
             localStorage.setItem('sexuality', retrievedSexuality);
-
+            localStorage.setItem('userDetailsId', retrievedUserDetailsId);
+            localStorage.setItem('city', retrievedCity);
+            localStorage.setItem('country', retrievedCountry);
+            localStorage.setItem('longitude', retrievedLongitude);
+            localStorage.setItem('latitude', retrievedLatitude);
+    
             console.log("Data saved in LocalStorage");
         } else {
             // Retrieve from localStorage if `data` is not provided
@@ -53,14 +72,25 @@ const Home = () => {
             retrievedGender = localStorage.getItem('gender') || '';
             retrievedSexuality = localStorage.getItem('sexuality') || '';
             retrievedImage = localStorage.getItem('profileImage') || '';
+            retrievedUguid = localStorage.getItem('uid') || '';
+            retrievedUserDetailsId = localStorage.getItem('userDetailsId') || '';
+            retrievedCity = localStorage.getItem('city') || '';
+            retrievedCountry = localStorage.getItem('country') || '';
+            retrievedLongitude = localStorage.getItem('longitude') || '';
+            retrievedLatitude = localStorage.getItem('latitude') || '';
         }
-
+    
         // Update state
         setName(retrievedName);
         setGender(retrievedGender);
         setSexuality(retrievedSexuality);
         setProfileImage(retrievedImage);
+        // setUguid(retrievedUguid);
+        // setUserDetailsId(retrievedUserDetailsId);
+        // setCity(retrievedCity);
+        // setCountry(retrievedCountry);
     }, [data]);
+    
 
     console.log("Gender in Home = : ", gender)
     console.log("Sexuality in Home = : ", sexuality)
@@ -81,6 +111,9 @@ const Home = () => {
                     console.log("data in Home from Api is  = ", data)
                     const shuffledData = data.sort(() => Math.random() - 0.5);
                     setProfiles(shuffledData); // Update profiles state with shuffled data
+                    localStorage.setItem('Profiles', shuffledData);
+                    localStorage.setItem('profiles', JSON.stringify(shuffledData));
+                    console.log("Profile is saved in LocalStroage")
                 })
                 .catch(error => console.error('Error fetching user data:', error))
                 .finally(() => setIsLoading(false)); // Stop loading
