@@ -119,16 +119,18 @@ const Member = () => {
         setTimeout(() => setShowAnimatedHeart(false), 1000); // Hide the animation after it finishes
     };
 
-    // Categorize images
-    const profileImage = userData.imagePaths.find((url) => url.includes('Profile_image'));
-    const privateImages = userData.imagePaths.filter((url) => url.includes('Private_Photo'));
-    const publicImages = userData.imagePaths.filter(
+    const imagePaths = Object.keys(userData.imageData).map(key => userData.imageData[key]);
+
+    const profileImage = imagePaths.find((url) => url.includes('Profile_image'));
+    const privateImages = imagePaths.filter((url) => url.includes('Private_Photo'));
+    const publicImages = imagePaths.filter(
         (url) => !url.includes('Profile_image') && !url.includes('Private_Photo')
     );
 
-    console.log("Profile image  = ", profileImage)
-    console.log("Profile image  = ", privateImages)
-    console.log("Profile image  = ", publicImages)
+    console.log("Profile image  = ", profileImage);
+    console.log("Private images = ", privateImages);
+    console.log("Public images  = ", publicImages);
+
 
     const { totalGhostEntries } = userData;
 
@@ -310,8 +312,8 @@ const Member = () => {
                         <div>
                             <h2 className="text-[#e9677b] text-lg font-semibold mb-2">{userData.gender === 'Men' ? 'Bills I can Help with' : 'Bills I need Help with'}</h2>
                             <div className="grid grid-cols-4 gap-0 text-gray-800 pl-4">
-                                {userData.bills.map((bill, index) => (
-                                    <InterestButton key={index} interest={bill} />
+                                {userData.bills.split(',').map((bill, index) => (
+                                    <InterestButton key={index} interest={bill.trim()} />
                                 ))}
                             </div>
                         </div>

@@ -5,28 +5,35 @@ import Slider from "rc-slider";
 import "rc-slider/assets/index.css";
 import axios from 'axios';
 import { useFilters } from './Components/Context/FilterContext';
+import { useFilterData } from './Components/Context/FilterDataContext'
 import { useLocation } from "react-router-dom";
 import API_CONFIG from '../Api_Config'
 import CustomLoader from './Components/CustomLoader'; // Import your loader component
+
 const Search = () => {
     const location = useLocation();
     const { filters, updateFilters, resetFilters } = useFilters();
     console.log("Filters From Context = ", filters)
     const [profiles, setProfiles] = useState([]); // State to store 
+    const { filterData, setFilterData } = useFilterData();
+    //console.log("FiltersData From Context = ", filterData)
+    const [cacheData, setcacheData] = useState([]); // State to store 
     const [languageItems, setLanguageItems] = useState([]); // Language data
     const [billsData, setBillsData] = useState([]); // Bills data
     const [name, setName] = useState(filters.fullName || null);
     const [sexuality, setSexuality] = useState('');
     const [selectedMembers, setSelectedMembers] = useState(filters.selectedItems || []);
     const [isLoading, setIsLoading] = useState(true); // State for loader
-    const [dontShowMembers, setdontShowMembers] = useState([]);
-    const [selectedLocation, setSelectedLocation] = useState("cartagena"); // Default to Cartagena
-    const [otherLocation, setOtherLocation] = useState(""); // Store input value for other location    
+    const [currentLocation, setCurrentLocation] = useState(''); // Holds the current location string
+    const [selectedLocation, setSelectedLocation] = useState("cartagena"); // Default to Cartagena  
     const [distance, setDistance] = useState(filters.distance || 0);
+    const [heightInInches, setHeightInInches] = useState(filters.heightInInches || 70);
     const [ageRange, setAgeRange] = useState([filters.minAge || 18, filters.maxAge || 70]);
-    const [heightRange, setHeightRange] = useState([48, 96]); // 4ft (48in) to 8ft (96in)
+    const [heightRange, setHeightRange] = useState([filters.minHeightInInches || 48, filters.maxHeightInInches || 96]); // 4ft (48in) to 8ft (96in)
     const [selectedLanguage, setSelectedLanguage] = useState(filters.language || null);
     const [city, setCity] = useState('');
+    const [DBid, setDBid] = useState('');
+    const [sortBy, setSortBy] = useState('Recently Active'); // Default sorting option
     const [country, setCountry] = useState('');
     const [latitude, setLatitude] = useState(null);
     const [gender, setgender] = useState(null);
@@ -46,6 +53,7 @@ const Search = () => {
     const [selectedPhysicalAppearance, setSelectedPhysicalAppearance] = useState(filters.bodyType || null);
     const [selectedLookingFor, setSelectedLookingFor] = useState(filters.lookingFor || null);
     const [selectedEthnicity, setSelectedEthnicity] = useState(filters.ethnicity || null);
+    const [isFiltersApplied, setIsFiltersApplied] = useState(false);
     const [occupation, setOccupation] = useState(filters.occupation || null); // State to handle occupation input
     useEffect(() => {
         const storedProfiles = localStorage.getItem('profiles');
@@ -55,16 +63,33 @@ const Search = () => {
         const storedlat = localStorage.getItem('latitude');
         const savedGender = localStorage.getItem('gender');
         const savedSexuality = localStorage.getItem('sexuality');
-        if (storedProfiles) {
-            setProfiles(JSON.parse(storedProfiles));
-        }
+        const savedDBiD = localStorage.getItem('dbID');
+        // if (storedProfiles) {
+        //     setProfiles(JSON.parse(storedProfiles));
+        // }
+
+        // const cachedProfiles = localStorage.getItem('Cachedata');
+        // if (cachedProfiles) {
+        //     setcacheData(JSON.parse(cachedProfiles)); // Use cached profiles if available
+        // } else {
+        //     const storedProfiles = localStorage.getItem('profiles');
+        //     if (storedProfiles) {
+        //         setProfiles(JSON.parse(storedProfiles)); // Use stored profiles if cache data is not available
+        //     }
+        // }
+
         setgender(savedGender)
         setCity(storedCity)
+        setDBid(savedDBiD)
         setCountry(storedCountry)
         setLongitude(storedlong)
         setLatitude(storedlat)
         setSexuality(savedSexuality)
+        setCurrentLocation(`${storedCity}, ${storedCountry}`); // Display-friendly format
     }, []);
+
+
+    const dataToShow = cacheData.length > 0 ? cacheData : profiles; // Fallback to profiles if cacheData is empty
 
     console.log("city = ", city)
     console.log("country = ", country)
@@ -76,6 +101,121 @@ const Search = () => {
     console.log("other  country = ", otherCountry)
     console.log("other Long = ", otherLongitude)
     console.log("other Lat  = ", otherLatitude)
+
+
+    // useEffect(() => {
+    //     setIsLoading(true); // Start loading
+    //     // Check if filterData is present, and if not, make the API call to get data without filters
+    //     if (!filterData) {
+    //         // If filterData is null, undefined, or an empty object, we fetch the data without filters
+    //         if (gender && sexuality && DBid && longitude && latitude) {
+    //             setIsLoading(true); // Start loading
+    //             console.log("FilterData is null makeing Api request of GetAllExploreUsersAsync")
+    //             const url = `${API_CONFIG.BASE_URL}/Explore/GetAllExploreUsersAsync`;
+    //             const requestBody = {
+    //                 userId: DBid,
+    //                 sortBy: sortBy === 'Nearest' ? 1 : sortBy === 'Recently Active' ? 2 : 3,
+    //                 gender: gender,
+    //                 sexuality: sexuality,
+    //                 longitude: longitude,
+    //                 latitude: latitude,
+    //             };
+
+    //             console.log("Request body for fetchDataWithoutFilter:", requestBody);
+
+    //             fetch(url, {
+    //                 method: 'POST',
+    //                 headers: {
+    //                     'Content-Type': 'application/json',
+    //                     'Accept': '*/*',
+    //                     'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+    //                 },
+    //                 body: JSON.stringify(requestBody),
+    //             })
+    //                 .then(response => {
+    //                     if (!response.ok) {
+    //                         throw new Error(`HTTP error! Status: ${response.status}`);
+    //                     }
+    //                     return response.text();
+    //                 })
+    //                 .then(textResponse => {
+    //                     if (textResponse) {
+    //                         const result = JSON.parse(textResponse);
+    //                         if (result && result.data) {
+    //                             setProfiles(result.data); // Set the data (no filter)
+    //                             console.log("Fetched data without filter:", result.data);
+    //                         }
+    //                     }
+    //                 })
+    //                 .catch(error => console.error('Error fetching user data:', error))
+    //                 .finally(() => setIsLoading(false)); // Stop loading
+    //         }
+    //     } else {
+    //         // If filterData is present, apply the filters
+    //         handleApplyFilters();
+    //     }
+    // }, [filterData, gender, sexuality, DBid, longitude, latitude, sortBy]);
+
+
+    useEffect(() => {
+        // Only fetch data when the filters are either not applied or when data is missing
+        if (!isFiltersApplied) {
+            setIsLoading(true); // Start loading
+            console.log("FilterData on Intiial UseEffect = ",filters)
+
+            // Check if filterData is present and apply the API request accordingly
+            if (filters) {
+                // Apply filters if filterData is present
+                handleApplyFilters();
+                setIsFiltersApplied(true); // Mark filters as applied
+            } else {
+                // If filterData is not available, fetch without filters
+                if (gender && sexuality && DBid && longitude && latitude) {
+                    console.log("FilterData is null, making API request to GetAllExploreUsersAsync");
+
+                    const url = `${API_CONFIG.BASE_URL}/Explore/GetAllExploreUsersAsync`;
+                    const requestBody = {
+                        userId: DBid,
+                        sortBy: sortBy === 'Nearest' ? 1 : sortBy === 'Recently Active' ? 2 : 3,
+                        gender: gender,
+                        sexuality: sexuality,
+                        longitude: longitude,
+                        latitude: latitude,
+                    };
+
+                    console.log("Request body for fetchDataWithoutFilter:", requestBody);
+
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': '*/*',
+                            'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+                        },
+                        body: JSON.stringify(requestBody),
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! Status: ${response.status}`);
+                            }
+                            return response.text();
+                        })
+                        .then(textResponse => {
+                            if (textResponse) {
+                                const result = JSON.parse(textResponse);
+                                if (result && result.data) {
+                                    setProfiles(result.data); // Set the data without filters
+                                    console.log("Fetched data without filter:", result.data);
+                                }
+                            }
+                        })
+                        .catch(error => console.error('Error fetching user data:', error))
+                        .finally(() => setIsLoading(false)); // Stop loading
+                }
+            }
+        }
+    }, [filters, gender, sexuality, DBid, longitude, latitude, sortBy, isFiltersApplied]);
+
 
     const handleSingleSelection = (category, value) => {
         switch (category) {
@@ -113,7 +253,7 @@ const Search = () => {
         setName(event.target.value);
     };
 
-    
+
     const handleShowMore = () => {
         setVisibleProfiles((prev) => prev + 20); // Load 30 more profiles
     };
@@ -121,7 +261,7 @@ const Search = () => {
 
     const handleResetFilters = () => {
         // Reset the filters and fields to match selectedFilters
-        resetFilters();
+        resetFilters(null);
         setName('');                          // fullName
         setAgeRange([18, 70]);                 // maxAge, minAge
         setHeightRange([48, 96]);              // maxHeightInInches, minHeightInInches
@@ -141,6 +281,13 @@ const Search = () => {
         setSelectedKids('');               // children
         setSearchText('');                     // optional, if needed for search text
         setSelectedLocation('cartagena');      // default to 'cartagena'
+        setCity(city)
+        setCountry(country)
+        setOtherCity('')
+        setOtherCountry('')
+        //setFilterData(null)
+
+        //handleApplyFilters();  // This will now apply the reset filters to the API
 
     };
 
@@ -172,6 +319,11 @@ const Search = () => {
     useEffect(() => {
         fetchLanguages(); // Fetch languages when component mounts
     }, []);
+
+    const handleSortChange = (newSortBy) => {
+        setSortBy(newSortBy);
+    };
+
 
     // Fetch Bills Data (example)
     const fetchBillsData = async () => {
@@ -276,6 +428,7 @@ const Search = () => {
 
     // Prepare the selected filters as a JSON object
     const handleApplyFilters = async () => {
+        console.log("i am in handleApply Filter")
         const selectedFilters = {
             // Flatten location into direct fields (no nested 'location' object)
             city: selectedLocation === "cartagena"
@@ -292,7 +445,7 @@ const Search = () => {
                 : String(otherLongitude),
 
             radius: distance,
-            fullName: name,
+            search: name,
             userId: 0,
             maxAge: ageRange[1],  // Max age (second value in ageRange)
             minAge: ageRange[0],  // Min age (first value in ageRange)
@@ -312,17 +465,22 @@ const Search = () => {
             bodyType: selectedPhysicalAppearance,
             lookingFor: selectedLookingFor,
             ethnicity: selectedEthnicity,
+            sortBy: sortBy === 'Nearest' ? 1 : sortBy === 'Recently Active' ? 2 : 3,
         };
 
+    
+
         // Log the selected filters to see the final structure
-        console.log("Selected Filters:", JSON.stringify(selectedFilters));
+        console.log("Selected Filters:", selectedFilters);
+        //setFilterData(JSON.stringify(selectedFilters))
+        //console.log("FilterData afterSaving  = ",filterData)
 
         updateFilters(selectedFilters);
 
         // Make API call to fetch user details
         try {
             setIsLoading(true); // Start loading
-            const response = await fetch(`${API_CONFIG.BASE_URL}/GetAllUserDetails`, {
+            const response = await fetch(`${API_CONFIG.BASE_URL}/Explore/FilterExploreUserAsync`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -332,13 +490,21 @@ const Search = () => {
                 body: JSON.stringify(selectedFilters), // Pass the selectedFilters as the request body
             });
 
-            const result = await response.json();
+            const textResponse = await response.text();
 
-            // Randomize the response data
-            ///const randomizedProfiles = randomizeArray(result);
+            if (textResponse) {
+                const result = JSON.parse(textResponse); // Parse the text as JSON if it's not empty
+                if (result && result.data) {
+                    setProfiles(result.data);  // Set the data (no filter)
+                    console.log("Fetched data with filter:", result.data);
+                } else {
+                    console.error("No data found in the response.");
+                }
+            } else {
+                console.error("Empty response body.");
+            }
 
-            // Set the randomized profiles to state
-            setProfiles(result);
+
         } catch (err) {
             console.error('Error fetching user details:', err);
         } finally {
@@ -348,20 +514,11 @@ const Search = () => {
         // You can send this JSON object to your backend or update local state here as needed.
     };
 
-    const randomizeArray = (array) => {
-        let shuffledArray = [...array];
-        for (let i = shuffledArray.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]];
-        }
-        return shuffledArray;
-    };
-
 
 
     return (
         <div>
-            <Navbar></Navbar>
+            <Navbar onSortChange={handleSortChange} sortBy={sortBy} />
             {/* Sidebar Filters */}
             {isLoading ? (
                 <CustomLoader isVisible={isLoading} />
@@ -403,7 +560,7 @@ const Search = () => {
                                             className="mr-2 text-[#e9677b] bg-gray-100 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600"
                                         />
                                         <span>
-                                            {city && country ? `${city}, ${country}` : "Current Location"} {/* Always display city and country */}
+                                            {currentLocation || 'Loading current location...'} {/* Always display city and country */}
                                         </span>
                                     </label>
 
@@ -590,8 +747,8 @@ const Search = () => {
                                 <div className="flex flex-wrap justify-between gap-2">
                                     {[
                                         "High school",
-                                        'Bechelor"s degree',
-                                        'Master"s degree',
+                                        'Bachelor\'s degree',
+                                        'Master\'s degree',
                                         "Doctorate"
                                     ].map((education) => (
                                         <button
@@ -673,7 +830,7 @@ const Search = () => {
                             <div className="my-4">
                                 <label className="block mb-3 text-[#e9677b] font-medium">Relationship Status</label>
                                 <div className="flex flex-wrap justify-between gap-2">
-                                    {["Single", "In a relationship", "Married", "Divorced"].map((relationshipStatus) => (
+                                    {["Single", "In a relationship", "Married", "Divorced", "Situationship"].map((relationshipStatus) => (
                                         <button
                                             type="button"
                                             key={relationshipStatus}
@@ -762,18 +919,18 @@ const Search = () => {
                     {/* Main Content */}
                     <main className="w-full  lg:w-4/5 mt-6 lg:mt-0 lg:ml-8">
                         <div className="profile-cards grid gap-6 w-full max-w-[1200px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-                        {profiles.slice(0, visibleProfiles).map(profile => (
-                            <ProfileCard key={profile.id} profile={profile} />
-                        ))}
+                            {dataToShow.slice(0, visibleProfiles).map(profile => (
+                                <ProfileCard key={profile.id} profile={profile} />
+                            ))}
                         </div>
-                        {visibleProfiles < profiles.length && (
-                        <button
-                            onClick={handleShowMore}
-                            className="mt-6 px-4 py-2 rounded-full bg-[#e9677b] text-white rounded hover:bg-[#e9677b]"
-                        >
-                            Show More
-                        </button>
-                    )}
+                        {visibleProfiles < dataToShow.length && (
+                            <button
+                                onClick={handleShowMore}
+                                className="mt-6 px-4 py-2 rounded-full bg-[#e9677b] text-white rounded hover:bg-[#e9677b]"
+                            >
+                                Show More
+                            </button>
+                        )}
                     </main>
                 </div>
             )}

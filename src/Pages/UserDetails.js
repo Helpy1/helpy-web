@@ -91,11 +91,23 @@ function UserDetail() {
                     });
                 }
             });
-            const sortedLanguages = [...languageSet].sort().map(language => ({
-                label: language,
-                value: language,
-            }));
-            setLanguageItems(sortedLanguages);
+
+            // Convert to an array, sort alphabetically, and move "English" to the top
+            const sortedLanguages = [...languageSet].sort((a, b) => {
+                if (a === 'English') return -1; // Move "English" to the top
+                if (b === 'English') return 1;
+                return a.localeCompare(b); // Sort alphabetically for others
+            });
+
+            // Map the sorted array to the expected structure
+            setLanguageItems(sortedLanguages.map(language => ({ label: language, value: language })));
+
+
+            // const sortedLanguages = [...languageSet].sort().map(language => ({
+            //     label: language,
+            //     value: language,
+            // }));
+            // setLanguageItems(sortedLanguages);
         } catch (error) {
             console.error('Error fetching languages:', error);
         }
@@ -287,37 +299,6 @@ function UserDetail() {
         );
     };
 
-    // Initial image selection handler to set profile or private tags
-    const handleImageChange = (event) => {
-        const files = Array.from(event.target.files);
-        setImageFiles(files); // Ensure files are added to imageFiles
-        const urls = files.map((file) => URL.createObjectURL(file)); // Create URLs for preview
-        setImageUrls((prevUrls) => [...prevUrls, ...urls].slice(0, 8)); // Limit to 8 images
-        setImageTypes((prevTypes) => [...prevTypes, ...Array(files.length).fill('')].slice(0, 8)); // No default tag
-    };
-
-    // Toggle image type for marking profile, private, or post images
-    const toggleImageType = (index) => {
-        setImageTypes((prevImageTypes) => {
-            const newImageTypes = [...prevImageTypes];
-
-            if (newImageTypes[index] === '' && !newImageTypes.includes('profile')) {
-                // Set as profile if no profile image is selected
-                newImageTypes[index] = 'profile';
-            } else if (newImageTypes[index] === 'profile') {
-                // If profile image is clicked again, keep it as profile (disable further toggling)
-                return newImageTypes;
-            } else {
-                // Toggle between private and post (untagged)
-                newImageTypes[index] = newImageTypes[index] === 'private' ? '' : 'private';
-            }
-
-            return newImageTypes;
-        });
-    };
-
-
-
     // Handle image removal
     const handleRemoveImage = (uri, isPublic) => {
         if (isPublic) {
@@ -389,47 +370,179 @@ function UserDetail() {
                 return;
             }
 
-            const imageData = [];
+            const formData = new FormData();
 
-            // Upload profile image
-            const profileImageUrl = await uploadImageToFirebase(selectedProfileImage, 'Profile_image.jpg');
-            imageData.push({ key: 'Profile_image', url: profileImageUrl });
+            // Add public images to formData with custom names
+            for (let index = 0; index < publicImages.length; index++) {
+                const uri = publicImages[index];
+                const name = uri === selectedProfileImage ? 'Profile_image' : `Post_${index + 1}`;
 
-            // Upload private images
-            await Promise.all(
-                privateImages.map(async (uri, index) => {
-                    const privateImageUrl = await uploadImageToFirebase(uri, `Private_Photo_${index + 1}.jpg`);
-                    imageData.push({ key: `Private_Photo_${index + 1}`, url: privateImageUrl });
-                })
+                // Fetch the image as a Blob, and then create a File object
+                const imageBlob = await fetch(uri).then(res => res.blob());
+                const imageFile = new File([imageBlob], name, { type: 'image/jpeg' });
+
+                formData.append('imageFiles', imageFile);
+            }
+
+            // Add private images to formData with custom names
+            for (let index = 0; index < privateImages.length; index++) {
+                const uri = privateImages[index];
+
+                // Fetch the image as a Blob, and then create a File object
+                const imageBlob = await fetch(uri).then(res => res.blob());
+                const imageFile = new File([imageBlob], `Private_Photo_${index + 1}`, { type: 'image/jpeg' });
+
+                formData.append('imageFiles', imageFile);
+            }
+
+            console.log("form Data = ", formData);
+
+            // Log the FormData content
+            console.log("FormData content:");
+            formData.forEach((value, key) => {
+                if (value instanceof File) {
+                    console.log(`Key: ${key}, File Name: ${value.name}, File Type: ${value.type}, File Size: ${value.size} bytes`);
+                } else {
+                    console.log(`Key: ${key}, Value: ${value}`);
+                }
+            });
+
+            const response = await axios.post(
+                `${API_CONFIG.BASE_URL}/api/UploadListOfImagesToGoogleBucket?gUid=${userData?.userUID}`, // Include gUid in the URL
+                formData,
+                {
+                    headers: {
+                        'Accept': '*/*',
+                        'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`, // Authorization token if needed
+                        'Content-Type': 'multipart/form-data',
+                    },
+                }
             );
 
-            // Upload public images
-            await Promise.all(
-                publicImages.map(async (uri, index) => {
-                    if (uri !== selectedProfileImage) {
-                        const publicImageUrl = await uploadImageToFirebase(uri, `Public_Photo_${index + 1}.jpg`);
-                        imageData.push({ key: `Public_Photo_${index + 1}`, url: publicImageUrl });
-                    }
-                })
-            );
+            // Updated response handling
+            const updatedResponse = response.data.map(item => ({
+                key: item.fileName,
+                url: item.imageLink,
+            }));
 
-            console.log('Uploaded Image Data:', imageData);
-            setUploadedImages(imageData);
+            console.log('Updated Response:', updatedResponse);
 
-            // Proceed to next form or complete submission
+            setUploadedImages(updatedResponse);
             setShowForm(5);
         } catch (error) {
-            console.error('Error uploading images:', error);
-            setAlertMessage('Error uploading images. Please try again.');
+            if (error.response) {
+                // Handle specific error responses
+                if (error.response.status === 413) {
+                    showAlert('The images are too large. Please reduce their size and try again.');
+                } else {
+                    console.error('Error uploading images:', error.response.data);
+                    showAlert('There was an issue uploading your images. Please try again.');
+                }
+            } else {
+                // Catch other errors (e.g., network errors)
+                console.error('Error uploading images:', error.message);
+                showAlert('An unexpected error occurred. Please try again.');
+            }
         } finally {
             //setIsLoading(false); // Hide loader after the process ends
         }
     };
 
 
+
     // Final submit function to handle the entire form submission
+    // const submitForm = async () => {
+    //     // Ensure we are using the correct email based on the logintype
+    //     const finalEmail = logintype === 'phone' || logintype === 'facebook' ? email : (userData?.email || email);
+
+    //     if (!finalEmail) {
+    //         setAlertMessage('Email is required.');
+    //         setAlertVisible(true);
+    //         return;
+    //     }
+
+    //     //const uGuid = userData ? userData.uid : userData.userUID;  // Set uGuid based on condition
+    //     //setIsLoading(true); // Show loader before form submission starts
+    //     try {
+    //         const formData = {
+    //             useradditionalData: {
+    //                 ageRange: [0, 0],
+    //                 bodyType: bodyType || 'string',
+    //                 children: children || 'string',
+    //                 drinking: drinking || 'string',
+    //                 education: education || 'string',
+    //                 heightInInches: height || 0,
+    //                 language: language || 'string',
+    //                 relationshipStatus: relationshipStatus || 'string',
+    //                 smoking: smoking || 'string'
+    //             },
+    //             uGuid: userData.userUID,
+    //             age: age || 0,
+    //             birthday: birthday || 'string',
+    //             description: loginObj.description || 'string',
+    //             intentions: loginObj.intentions || 'string',
+    //             email: finalEmail, // Use the resolved email here
+    //             password: '',
+    //             ethnicity: ethnicity || 'string',
+    //             fullName: fullName || 'string',
+    //             gender: gender || 'string',
+    //             occupation: loginObj.occupation || 'string',
+    //             selectedItems: selectedBills || [0],
+    //             images: uploadedImages,
+    //             sexuality: sexuality || 'string',
+    //             type: logintype || userData?.logintype,
+    //             city: city || 'string',
+    //             country: country || 'string',
+    //             longitude: String(longitude || ''),
+    //             latitude: String(latitude || ''),
+    //             lookingFor: lookingfor || 'string'
+    //         };
+
+    //         console.log("formData = ",formData)
+    //         // Submit form data
+    //         const response = await fetch(`${API_CONFIG.BASE_URL}/api/account/registerthirdpartyuser`, {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //                 'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+    //             },
+    //             body: JSON.stringify(formData),
+    //         });
+
+    //         if (!response.ok) {
+    //             throw new Error('Form submission failed');
+    //         }
+
+    //         const data = await response.json();
+    //         console.log('Form submitted successfully:', data);
+
+    //         const response2 = await fetch(
+    //             `${API_CONFIG.BASE_URL}/api/account/GetUserDetail?uGuid=${userData.userUID}`,
+    //             {
+    //                 method: 'GET',
+    //                 headers: {
+    //                     'Content-Type': 'application/json',
+    //                     'Accept': '/',
+    //                     'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+    //                 },
+    //             }
+    //         );
+
+    //         if (response2.status === 200) {
+    //             const userData = await response2.json(); // Parse response data as JSON
+    //             navigate('/Home', { state: { data: userData } });
+    //         } 
+
+    //     } catch (error) {
+    //         console.error('Error submitting form:', error);
+    //         setAlertMessage('Error submitting form. Please try again.');
+    //     } finally {
+    //         setIsLoading(false); // Hide loader after form submission
+    //     }
+    // };
+
     const submitForm = async () => {
-        // Ensure we are using the correct email based on the logintype
+        // Ensure we are using the correct email based on the login type
         const finalEmail = logintype === 'phone' || logintype === 'facebook' ? email : (userData?.email || email);
 
         if (!finalEmail) {
@@ -438,9 +551,8 @@ function UserDetail() {
             return;
         }
 
-        //const uGuid = userData ? userData.uid : userData.userUID;  // Set uGuid based on condition
-        //setIsLoading(true); // Show loader before form submission starts
         try {
+            // Prepare form data
             const formData = {
                 useradditionalData: {
                     ageRange: [0, 0],
@@ -453,12 +565,12 @@ function UserDetail() {
                     relationshipStatus: relationshipStatus || 'string',
                     smoking: smoking || 'string'
                 },
-                uGuid: userData.userUID,
+                uGuid: userData?.userUID,
                 age: age || 0,
                 birthday: birthday || 'string',
                 description: loginObj.description || 'string',
                 intentions: loginObj.intentions || 'string',
-                email: finalEmail, // Use the resolved email here
+                email: finalEmail,
                 password: '',
                 ethnicity: ethnicity || 'string',
                 fullName: fullName || 'string',
@@ -475,8 +587,14 @@ function UserDetail() {
                 lookingFor: lookingfor || 'string'
             };
 
-            console.log("formData = ",formData)
-            // Submit form data
+            //console.log("formData = ", formData);
+
+            // Show loading indicator
+            setIsLoading(true);
+
+
+
+            // Submit the registration form
             const response = await fetch(`${API_CONFIG.BASE_URL}/api/account/registerthirdpartyuser`, {
                 method: 'POST',
                 headers: {
@@ -490,26 +608,80 @@ function UserDetail() {
                 throw new Error('Form submission failed');
             }
 
-            const data = await response.json();
-            console.log('Form submitted successfully:', data);
+            const registrationData = await response.json();
+            console.log('Form submitted successfully:', registrationData);
 
-            // Navigate to the desired page
-            navigate('/Home', { state: { data } });
+            // If registration is successful, fetch user data
+            const response2 = await fetch(
+                `${API_CONFIG.BASE_URL}/api/account/GetUserDetail?uGuid=${userData.userUID}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': '/',
+                        'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+                    },
+                }
+            );
+
+            if (response2.status === 200) {
+                const userDetail = await response2.json(); // Parse response data as JSON
+                console.log('User details:', userDetail);
+
+                // Navigate to home page with user data
+                navigate('/Home', { state: { data: userDetail } });
+            } else {
+                throw new Error('Failed to fetch user details');
+            }
         } catch (error) {
             console.error('Error submitting form:', error);
             setAlertMessage('Error submitting form. Please try again.');
+            setAlertVisible(true); // Show error alert
         } finally {
             setIsLoading(false); // Hide loader after form submission
         }
     };
+
 
     const showAlert = (message) => {
         setAlertMessage(message);
         setAlertVisible(true);
     };
 
+    const validateEmail = async () => {
+        if (!email) {
+            showAlert('Email is required.');
+            return false;
+        }
 
-    const handleNextForm = (e) => {
+        try {
+            const apiUrl = `${API_CONFIG.BASE_URL}/api/account/ValidateUserByEmail?email=${email}`;
+            console.log("Appi URl = ", apiUrl)
+            const response = await axios.get(apiUrl, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `${API_CONFIG.AUTHORIZATION_KEY}`,
+                },
+            });
+
+            if (response.status === 200) {
+                showAlert('Email already in use');
+                return false;
+            }
+        } catch (error) {
+            if (error.response && error.response.status === 400) {
+                console.log("Email not in use")
+                return true; // Email does not exist
+            } else {
+                showAlert('Failed to validate email. Please try again.');
+                return false;
+            }
+        }
+        return false;
+    };
+
+
+    const handleNextForm = async (e) => {
         e.preventDefault();
         console.log("I am here")
         console.log("Full Name = ", fullName)
@@ -518,9 +690,14 @@ function UserDetail() {
         console.log("country = ", country)
 
         if (!fullName || !birthday || !city || !country) {
-            setAlertMessage('Please fill in all required fields: Name, Birthday, City, and Country.');
+            setAlertMessage('Please fill in all required fields');
             setAlertVisible(true);
             return;
+        }
+
+        if (logintype === 'phone' || logintype === 'facebook') {
+            const isEmailValid = await validateEmail();
+            if (!isEmailValid) return false;
         }
         console.log("I am out")
         const birthDate = new Date(birthday);
@@ -541,6 +718,41 @@ function UserDetail() {
         }
 
         setAge(calculatedAge);
+        if (email) {
+            const validateEmail = async () => {
+                if (!email) {
+                    showAlert('Email is required.');
+                    return false;
+                }
+
+                try {
+                    const apiUrl = `${API_CONFIG.BASE_URL}/api/account/ValidateUserByEmail?email=${email}`;
+                    console.log("Appi URl = ", apiUrl)
+                    const response = await axios.get(apiUrl, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `${API_CONFIG.AUTHORIZATION_KEY}`,
+                        },
+                    });
+
+                    if (response.status === 200) {
+                        showAlert('Email already in use');
+                        return false;
+                    }
+                } catch (error) {
+                    if (error.response && error.response.status === 400) {
+                        console.log("Email not in use")
+                        return true; // Email does not exist
+                    } else {
+                        showAlert('Failed to validate email. Please try again.');
+                        return false;
+                    }
+                }
+                return false;
+            };
+
+            validateEmail()
+        }
         setShowForm((prev) => prev + 1); // Move to the next form
     };
 
@@ -549,6 +761,12 @@ function UserDetail() {
     return (
         <div className="min-h-screen bg-base-200 flex items-center">
             <div className="card mx-auto w-full max-w-[500px]">
+                <CustomAlert
+                    isVisible={alertVisible}
+                    onClose={handleCloseAlert}
+                    animationSource={require('../Assets/Animations/Animation - 1728995823405.json')}
+                    message={alertMessage}
+                />
                 {showForm === 1 && (
                     <div className="py-24 px-10 flex justify-center flex-col items-center">
                         <Link to="/" className="fixed top-4 left-6 inline-block bg-white rounded-[100%] p-3">
@@ -671,8 +889,8 @@ function UserDetail() {
                                 <label className="block mb-2 text-[#f86a82] text-center font-semibold">Your Sexuality</label>
                                 <div className="flex justify-between mb-4">
                                     {[
-                                        { value: 'straight', label: 'Straight', icon: <FaMarsStroke className='text-2xl' /> },
-                                        { value: 'gay', label: 'Gay', icon: <FaPeopleArrows className='text-2xl' /> },
+                                        { value: 'Straight', label: 'Straight', icon: <FaMarsStroke className='text-2xl' /> },
+                                        { value: 'Gay', label: 'Gay', icon: <FaPeopleArrows className='text-2xl' /> },
                                     ].map(option => (
                                         <button
                                             key={option.value}
@@ -1062,7 +1280,7 @@ function UserDetail() {
                             <div className="mb-4">
                                 <label className="block mb-2 text-[#000] font-semibold text-sm">Relationship Status</label>
                                 <div className="flex flex-wrap justify-between gap-2 mb-4">
-                                    {['Single', 'In a relationship', 'Married', 'Divorced'].map(status => (
+                                    {['Single', 'In a relationship', 'Married', 'Divorced', 'Situationship'].map(status => (
                                         <button
                                             type="button"
                                             key={status}

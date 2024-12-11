@@ -69,6 +69,7 @@ function Login() {
 
             if (response.status === 200) {
                 const userData = await response.json(); // Parse response data as JSON
+                console.log("userData = ",userData)
                 navigate('/Home', { state: { data: userData } });
             } else {
                 navigate('/UserDetail', { state: { userData: userDetails } });

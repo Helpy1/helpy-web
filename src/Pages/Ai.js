@@ -7,22 +7,36 @@ function Ai() {
     const [dbid, setDbid] = useState('');
     const [gender, setGender] = useState('');
     const [sexuality, setSexuality] = useState('');
+    const [longitude, setLongitude] = useState('');
+    const [latitude, setLatitude] = useState('');
     const [visibleProfiles, setVisibleProfiles] = useState(20); // Number of profiles to display initially
     const [profiles, setProfiles] = useState([]);
     const [isLoading, setIsLoading] = useState(true); // State for loader
+
     useEffect(() => {
         // Retrieve data from localStorage on component mount
         const savedDBID = localStorage.getItem('dbID');
         const savedGender = localStorage.getItem('gender');
         const savedSexuality = localStorage.getItem('sexuality');
-
+        const savedLat = localStorage.getItem('latitude');
+        const savedLong = localStorage.getItem('longitude');
+    
+        // Ensure that retrieved data is valid (e.g., parsed numbers if needed)
+        const latitude = savedLat ? parseFloat(savedLat) : null;
+        const longitude = savedLong ? parseFloat(savedLong) : null;
+    
+        // Set the state values from localStorage
         setDbid(savedDBID);
         setGender(savedGender);
         setSexuality(savedSexuality);
-
+        setLongitude(longitude);
+        setLatitude(latitude);
+    
+        // Define the function to fetch user details
         const fetchUserDetails = async () => {
             setIsLoading(true); // Start loading
             try {
+                // Fetch user bills
                 const billsUrl = `${API_CONFIG.BASE_URL}/api/account/GetUserBills?userId=${savedDBID}`;
                 const billsResponse = await fetch(billsUrl, {
                     method: 'GET',
@@ -32,70 +46,74 @@ function Ai() {
                         'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
                     },
                 });
-
+    
                 if (!billsResponse.ok) {
                     throw new Error('Failed to fetch user bills');
                 }
-
+    
                 const billsData = await billsResponse.json();
                 const selectedItems = billsData.map(bill => bill.bills.id);
-
-                const filterData = {
-                    userId: savedDBID,
-                    fullName: null,
-                    minAge: 0,
-                    maxAge: 0,
+                console.log('Selected Bill IDs:', selectedItems);
+    
+                const csvBills = selectedItems.join(',');
+    
+                // Adjusted request body according to second format
+                const url = `${API_CONFIG.BASE_URL}/ai/GetAll4UAIUsersAsync`;
+                const requestBody = {
+                    userId: savedDBID, // Using savedDBID from localStorage
+                    sortBy: 2, // Assuming this is fixed (could be dynamic based on user input)
                     gender: savedGender,
-                    city: null,
-                    country: null,
-                    longitude: null,
-                    latitude: null,
-                    minHeightInInches: null,
-                    maxHeightInInches: null,
-                    radius: 0,
                     sexuality: savedSexuality,
-                    occupation: null,
-                    lookingFor: null,
-                    ethnicity: null,
-                    language: null,
-                    selectedItems,
-                    bodyType: null,
-                    smoking: null,
-                    drinking: null,
-                    relationshipStatus: null,
-                    education: null,
-                    children: null,
+                    longitude: String(longitude), // Parsed longitude
+                    latitude: String(latitude),   // Parsed latitude
+                    csvBills: csvBills,   // Added csvBills to requestBody
                 };
-
-                const userDetailsUrl = 'https://usamaanwar-001-site1.atempurl.com/GetAllUserDetails';
-                const userDetailsResponse = await fetch(userDetailsUrl, {
+    
+                console.log("Request body for fetchDataWithoutFilter:", requestBody);
+    
+                // Make POST request
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': '*/*',
                         'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
                     },
-                    body: JSON.stringify(filterData),
+                    body: JSON.stringify(requestBody),
                 });
-
-                if (!userDetailsResponse.ok) {
-                    throw new Error('Failed to fetch user details');
+    
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
                 }
-
-                const result = await userDetailsResponse.json();
-                const shuffledData = result.sort(() => Math.random() - 0.5);
-
-                setProfiles(shuffledData);
+    
+                const textResponse = await response.text();
+    
+                if (textResponse) {
+                    const result = JSON.parse(textResponse); // Parse the text as JSON if it's not empty
+                    if (result && result.data) {
+                        setProfiles(result.data); // Set the data (no filter)
+                        console.log("Fetched data without filter:", result.data);
+                    } else {
+                        console.error("No data found in the response.");
+                    }
+                } else {
+                    console.error("Empty response body.");
+                }
+    
             } catch (error) {
                 console.error('Error fetching data:', error);
             } finally {
                 setIsLoading(false); // Stop loading
             }
         };
-
-
-        fetchUserDetails();
+    
+        // Fetch the details when the component is mounted
+        if (savedDBID && savedGender && savedSexuality && latitude && longitude) {
+            fetchUserDetails();
+        }
+    
     }, []);
-
+    
     const handleShowMore = () => {
         setVisibleProfiles((prev) => prev + 20); // Load 30 more profiles
     };

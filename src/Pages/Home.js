@@ -12,15 +12,15 @@ const Home = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const data = location.state?.data;
-    console.log("data = ", data)
     const [gender, setGender] = useState('');
     const [Name, setName] = useState('');
     const [DBid, setDBid] = useState('');
+    const [longitude, setLongitude] = useState('');
+    const [latitude, setLatitude] = useState('');
     const [sexuality, setSexuality] = useState('');
     const [isLoading, setIsLoading] = useState(true); // State for loader
     const [profileImage, setProfileImage] = useState('');
-
-
+    const [sortBy, setSortBy] = useState('Recently Active'); // Default sorting option
 
     useEffect(() => {
         let retrievedGender = gender;
@@ -34,17 +34,14 @@ const Home = () => {
         let retrievedLongitude = '';
         let retrievedLatitude = '';
     
-        // Check and retrieve from `data` or `localStorage`
         if (data && data.length > 0) {
             const firstUser = data[0].users;
             retrievedName = firstUser.fullName;
             retrievedGender = firstUser.gender;
             retrievedSexuality = firstUser.sexuality;
-    
             const profileImageData = data.find(item => item.image?.name === "Profile_image");
             retrievedImage = profileImageData ? profileImageData.image.imageLink : '';
     
-            // Retrieve additional data
             retrievedUguid = firstUser.uGuid;
             retrievedUserDetailsId = data[0].userDetails.userId;
             retrievedCity = firstUser.city;
@@ -52,7 +49,6 @@ const Home = () => {
             retrievedLongitude = firstUser.longitude;
             retrievedLatitude = firstUser.latitude;
     
-            // Save to localStorage
             localStorage.setItem('name', retrievedName);
             localStorage.setItem('uid', retrievedUguid);
             localStorage.setItem('profileImage', retrievedImage);
@@ -64,10 +60,7 @@ const Home = () => {
             localStorage.setItem('country', retrievedCountry);
             localStorage.setItem('longitude', retrievedLongitude);
             localStorage.setItem('latitude', retrievedLatitude);
-    
-            console.log("Data saved in LocalStorage");
         } else {
-            // Retrieve from localStorage if `data` is not provided
             retrievedName = localStorage.getItem('name') || '';
             retrievedGender = localStorage.getItem('gender') || '';
             retrievedSexuality = localStorage.getItem('sexuality') || '';
@@ -80,57 +73,77 @@ const Home = () => {
             retrievedLatitude = localStorage.getItem('latitude') || '';
         }
     
-        // Update state
         setName(retrievedName);
         setGender(retrievedGender);
         setSexuality(retrievedSexuality);
         setProfileImage(retrievedImage);
-        // setUguid(retrievedUguid);
-        // setUserDetailsId(retrievedUserDetailsId);
-        // setCity(retrievedCity);
-        // setCountry(retrievedCountry);
+        setLongitude(retrievedLongitude);
+        setLatitude(retrievedLatitude);
+        setDBid(retrievedUserDetailsId);
     }, [data]);
-    
-
-    console.log("Gender in Home = : ", gender)
-    console.log("Sexuality in Home = : ", sexuality)
 
     useEffect(() => {
-        if (gender && sexuality) {
+        if (gender && sexuality && DBid && longitude && latitude) {
             setIsLoading(true); // Start loading
-            fetch(`${API_CONFIG.BASE_URL}/GetAllUsers?gender=${gender}&sexuality=${sexuality}`, {
-                method: 'GET',
+            const url = `${API_CONFIG.BASE_URL}/Explore/GetAllExploreUsersAsync`;
+            const requestBody = {
+                userId: DBid,
+                sortBy: sortBy === 'Nearest' ? 1 : sortBy === 'Recently Active' ? 2 : 3,
+                gender: gender,
+                sexuality: sexuality,
+                longitude: longitude,
+                latitude: latitude,
+            };
+
+            console.log("Request body for fetchDataWithoutFilter:", requestBody);
+
+            fetch(url, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
+                    'Accept': '*/*',
                     'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
                 },
+                body: JSON.stringify(requestBody),
             })
-                .then(response => response.json())
-                .then(data => {
-                    console.log("data in Home from Api is  = ", data)
-                    const shuffledData = data.sort(() => Math.random() - 0.5);
-                    setProfiles(shuffledData); // Update profiles state with shuffled data
-                    localStorage.setItem('Profiles', shuffledData);
-                    localStorage.setItem('profiles', JSON.stringify(shuffledData));
-                    console.log("Profile is saved in LocalStroage")
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(textResponse => {
+                    if (textResponse) {
+                        const result = JSON.parse(textResponse); // Parse the text as JSON if it's not empty
+                        if (result && result.data) {
+                            setProfiles(result.data);  // Set the data (no filter)
+                            localStorage.setItem('profiles', JSON.stringify(result.data));
+                            console.log("Profile is saved in LocalStroage")
+                            console.log("Fetched data without filter:", result.data);
+                        }
+                    }
                 })
                 .catch(error => console.error('Error fetching user data:', error))
                 .finally(() => setIsLoading(false)); // Stop loading
         }
-    }, [gender, sexuality]);
+    }, [gender, sexuality, DBid, longitude, latitude, sortBy]);
 
     const handleSearchClick = () => {
         navigate('/search', { state: { profiles } });
     };
 
     const handleShowMore = () => {
-        setVisibleProfiles((prev) => prev + 20); // Load 30 more profiles
+        setVisibleProfiles(prev => prev + 20); // Load 20 more profiles
     };
+
+    const handleSortChange = (newSortBy) => {
+        setSortBy(newSortBy);
+    };
+
 
     return (
         <div>
-            <Navbar profileImage={profileImage} name={Name} onSearchClick={handleSearchClick} />
+            <Navbar profileImage={profileImage} name={Name} onSearchClick={handleSearchClick} onSortChange={handleSortChange} sortBy={sortBy} />
             {isLoading ? (
                 <CustomLoader isVisible={isLoading} />
             ) : (

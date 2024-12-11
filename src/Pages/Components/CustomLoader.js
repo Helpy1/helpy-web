@@ -11,8 +11,8 @@ const CustomLoader = ({ isVisible }) => {
       className="fixed inset-0 flex items-center justify-center z-50"
       overlayClassName="fixed inset-0 bg-black bg-opacity-50"
     >
-      <div className="bg-white rounded-2xl w-1/6 h-1/5 flex items-center justify-center shadow-lg">
-        <div className="w-24 h-24">
+      <div className="bg-white rounded-2xl w-[220px] h-[120px] flex items-center justify-center shadow-lg">
+        <div className="w-20 h-20">
           <Lottie animationData={animationSource} loop autoplay />
         </div>
       </div>

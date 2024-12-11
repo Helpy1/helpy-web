@@ -15,7 +15,8 @@ const ProfileCard = ({ profile }) => {
     const { favoriteItems, updateFavorite } = useFavorites();
     const [showAnimatedHeart, setShowAnimatedHeart] = useState(false);
     const [processedProfiles, setProcessedProfiles] = useState([]);
-    //console.log("Profiles are = ",profile)
+    //console.log("I am ate ProfileCareds", profile)
+    //console.log("Profiles are = ", profile)
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -34,15 +35,6 @@ const ProfileCard = ({ profile }) => {
 
     const [profileImage, setProfileImage] = useState("");
     const [userID, setuserID] = useState("");
-
-    useEffect(() => {
-        // Extract the first image as the profile image
-        if (profile?.imagePaths?.length > 0) {
-            setProfileImage(profile.imagePaths[0]);
-        }
-        setuserID(profile.userId)
-
-    }, [profile]);
 
     // Determine if the current profile is already favorited
     const isFilled = favoriteItems[profile?.userId] || false;
@@ -115,6 +107,8 @@ const ProfileCard = ({ profile }) => {
         return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
     };
 
+    const P_Img = profile?.imageData?.Profile_image || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+
     return (
         <div className="w-[100%] border border-gray-300 rounded-lg overflow-hidden relative shadow-lg group"
             onClick={handleCardClick}
@@ -123,7 +117,7 @@ const ProfileCard = ({ profile }) => {
                 {/* Container for image and overlay */}
                 <div className="relative">
                     <img
-                        src={profileImage}
+                        src={P_Img}
                         className="w-full h-96 object-cover object-center transform transition-transform duration-300 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-black opacity-50"></div>
@@ -138,17 +132,25 @@ const ProfileCard = ({ profile }) => {
                 </span> */}
 
                 {/* Text Container */}
-                <div className="px-4 py-2 absolute bottom-2 z-20 w-full">
+                <div className="px-4 py-2 absolute bottom-2 z-5 w-full">
                     <div className="flex flex-row gap-3 justify-between">
                         <div className="self-end">
                             <h3 className="mb-[0px] flex flex-row items-center gap-3">
                                 {profile.isActive ? (
                                     <span className="text-2xl font-semibold text-[#7CFC00] overflow-hidden whitespace-nowrap text-ellipsis">
-                                        {profile.fullName}
+                                        {profile.fullName.length > 10 ? (
+                                            profile.fullName.substring(0, 10) + '...'
+                                        ) : (
+                                            profile.fullName
+                                        )}
                                     </span>
                                 ) :
                                     <span className="text-2xl font-semibold text-white overflow-hidden whitespace-nowrap text-ellipsis">
-                                        {profile.fullName}
+                                        {profile.fullName.length > 10 ? (
+                                            profile.fullName.substring(0, 10) + '...'
+                                        ) : (
+                                            profile.fullName
+                                        )}
                                     </span>
                                 }
 
@@ -161,17 +163,14 @@ const ProfileCard = ({ profile }) => {
                             </p>
 
                             {/* Bills Section - Row Layout with Truncation */}
-                            <div className="flex flex-row gap-2 mt-2 max-w-full overflow-hidden whitespace-nowrap text-ellipsis">
-                                {profile.bills.length > 0 ? (
-                                    <span className="text-white text-xs max-w-[70ch] overflow-hidden whitespace-nowrap text-ellipsis">
-                                        {truncateText(profile.bills.join(', '))}
-                                    </span>
-                                ) : (
-                                    <p className="text-white text-xs">No bills available</p>
-                                )}
+                            <div className="flex flex-row gap-2 mt-2 max-w-full overflow-hidden whitespace-nowrap text-ellipsis text-white font-bold
+                            ">
+                                {profile.bills.split(',').slice(0, 2).join(', ').length > 25
+                                    ? `${profile.bills.split(',').slice(0, 2).join(', ').substring(0, 20)}...`
+                                    : profile.bills.split(',').slice(0, 2).join(', ')}
                             </div>
                         </div>
-                        <div className="flex flex-col gap-3 relative">
+                        <div className="flex flex-col gap-3 relative ">
                             {showAnimatedHeart && (
                                 <AnimatedHeart style={{ right: 80, top: -40 }} /> // Positioning animated heart
                             )}

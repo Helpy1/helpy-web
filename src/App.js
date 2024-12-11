@@ -25,7 +25,6 @@ function App() {
       <Routes>
         <Route path="/" element={<Splash />} /> {/* Splash Screen as Home Page */}
         <Route path="/login" element={<Login />} />
-        <Route path="/ImageUpload" element={<ImageUpload />} />
         <Route path="/Interest" element={<Interest />} />
         <Route path="/Home" element={<Home />} />
         <Route path="/Register" element={<Registor />} />

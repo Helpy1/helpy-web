@@ -1,5 +1,5 @@
 import React, { useState, Fragment, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom'; // Import useLocation
 import navlogo from '../Assets/logo-white.png';
 import { FaSistrix, FaHeart, FaMessage } from 'react-icons/fa6';
 import { FaHome } from "react-icons/fa";
@@ -7,9 +7,11 @@ import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import { auth, signOut } from "../firebase/firebase-config";
 import { useNavigate } from 'react-router-dom';
+import { TiMessageTyping } from "react-icons/ti";
 import { FaEye } from "react-icons/fa";
-const Navbar = ({ onSearchClick }) => {
+const Navbar = ({ onSearchClick, sortBy, onSortChange }) => {
   const navigate = useNavigate();
+  const location = useLocation(); // Access current location (route)
   const [profileImage, setProfileImage] = useState('');
   const [name, setName] = useState('');
 
@@ -38,6 +40,8 @@ const Navbar = ({ onSearchClick }) => {
   console.log(profileImage)
   console.log(name)
 
+
+
   const handleLogout = async () => {
     try {
       localStorage.clear();
@@ -50,18 +54,26 @@ const Navbar = ({ onSearchClick }) => {
     }
   };
 
+  // Handle sort change when the user selects an option
+  const handleSortChange = (newSortBy) => {
+    onSortChange(newSortBy); // Pass the change back to the parent
+  };
+
+  const isHomeScreen = location.pathname === '/Home'; // Replace '/Favorite' with the actual path if needed
+
+  const isSearchScreen = location.pathname === '/Search'; // Replace '/Favorite' with the actual path if needed
 
 
   return (
     <>
-      <div className='md:shadow-sm'>
-        <nav className="bg-white border-gray-200 dark:bg-gray-900 md:block hidden">
+      <div>
+        <nav className="bg-white border-gray-200 dark:bg-gray-900 ">
           <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
             <Link to="/Home" className="flex items-center ">
               <img src={navlogo} className="h-auto w-32" alt="Flowbite Logo" />
               {/* <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">Helpy</span> */}
             </Link>
-            <div className="items-center justify-between  w-full md:flex md:w-auto " id="navbar-language">
+            <div className="items-center justify-between  w-full md:flex md:w-auto hidden" id="navbar-language">
               <ul className="flex flex-col font-medium p-4 md:p-0 mt-4 border border-gray-100 rounded-lg bg-gray-50 md:space-x-10  md:flex-row md:mt-0 md:border-0 md:bg-white dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
                 <li>
                   <Link
@@ -102,6 +114,59 @@ const Navbar = ({ onSearchClick }) => {
               </ul>
 
             </div>
+
+            {(isHomeScreen || isSearchScreen) && (
+              <div className="items-center justify-between  w-full md:flex md:w-auto hidden">
+                <ul className="flex flex-col font-medium p-4 md:p-0 mt-4 border border-gray-100 rounded-lg bg-gray-50 md:space-x-10  md:flex-row md:mt-0 md:border-0 md:bg-white dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
+                  <li>
+                    <Menu as="div" className="relative inline-block text-left ">
+                      <MenuButton className="inline-flex w-full justify-center items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                        {sortBy}
+                        <ChevronDownIcon aria-hidden="true" className="h-5 w-5 text-gray-400" />
+                      </MenuButton>
+                      <MenuItems className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                        <div className="py-1">
+                          <MenuItem>
+                            {({ active }) => (
+                              <button
+                                onClick={() => handleSortChange('Nearest')}
+                                className={`block px-4 py-2 text-sm ${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'}`}
+                              >
+                                Nearest
+                              </button>
+                            )}
+                          </MenuItem>
+                          <MenuItem>
+                            {({ active }) => (
+                              <button
+                                onClick={() => handleSortChange('Recently Active')}
+                                className={`block px-4 py-2 text-sm ${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'}`}
+                              >
+                                Recently Active
+                              </button>
+                            )}
+                          </MenuItem>
+                          <MenuItem>
+                            {({ active }) => (
+                              <button
+                                onClick={() => handleSortChange('Newest')}
+                                className={`block px-4 py-2 text-sm ${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'}`}
+                              >
+                                Newest
+                              </button>
+                            )}
+                          </MenuItem>
+                        </div>
+                      </MenuItems>
+                    </Menu>
+                  </li>
+                </ul>
+              </div>
+            )}
+
+
+
+
             <div className="flex items-center  relative">
               <Menu as="div" className="relative inline-block text-left">
                 {({ open }) => (
@@ -155,26 +220,6 @@ const Navbar = ({ onSearchClick }) => {
                             </a>
                           )}
                         </MenuItem>
-                        <MenuItem>
-                          {({ active }) => (
-                            <a
-                              href="#"
-                              className={`block px-4 py-2 text-sm ${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'}`}
-                            >
-                              Settings
-                            </a>
-                          )}
-                        </MenuItem>
-                        <MenuItem>
-                          {({ active }) => (
-                            <a
-                              href="#"
-                              className={`block px-4 py-2 text-sm ${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'}`}
-                            >
-                              Help Center
-                            </a>
-                          )}
-                        </MenuItem>
 
                         {/* Divider */}
                         <div className="border-t border-gray-200 my-1"></div>
@@ -202,23 +247,19 @@ const Navbar = ({ onSearchClick }) => {
 
           </div>
         </nav>
-        <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-md border-t border-gray-200 md:hidden block">
-          <div className="flex justify-around items-center h-16">
-            {/* Home Icon */}
-            <Link className="bg-white shadow rounded-full p-4 hover:bg-[#e9677b] hover:text-white">
-              <FaHome />
+        <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-md border-t border-gray-200 md:hidden block z-20">
+          <div className="flex justify-around items-center h-12">
+            <Link to="/Home" className="bg-white  rounded-full h-[35px] w-[35px] flex justify-center items-center hover:bg-[#e9677b] hover:text-white">
+              <FaHome className='w-5 h-5' />
             </Link>
-            {/* Search Icon */}
-            <Link className="bg-white shadow rounded-full p-4 hover:bg-[#e9677b] hover:text-white">
-              <FaSistrix />
+            <Link to="/Search" className="bg-white  rounded-full h-[35px] w-[35px] flex justify-center items-center hover:bg-[#e9677b] hover:text-white">
+              <FaHeart className='w-5 h-5' />
             </Link>
-            {/* Notifications Icon */}
-            <Link className="bg-white shadow rounded-full p-4 hover:bg-[#e9677b] hover:text-white">
-              <FaHeart />
+            <Link to="/Interest" className="bg-white  rounded-full  h-[35px] w-[35px] flex justify-center items-center hover:bg-[#e9677b] hover:text-white">
+              <FaEye className='w-5 h-5' />
             </Link>
-            {/* Profile Icon */}
-            <Link className="bg-white shadow rounded-full p-4 hover:bg-[#e9677b] hover:text-white">
-              <FaMessage />
+            <Link to="/Chat" className="bg-white rounded-full  h-[35px] w-[35px] flex justify-center items-center hover:bg-[#e9677b] hover:text-white">
+              <TiMessageTyping className='w-5 h-5' />
             </Link>
           </div>
         </nav>

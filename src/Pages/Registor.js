@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from "firebase/auth"; // Import Firebase method for creating a user
+import { signInWithEmailAndPassword } from "firebase/auth"; // Import Firebase function for login
 import { auth } from "../firebase/firebase-config"; // Import the auth object from your Firebase configuration
 import darkLogo from '../Assets/HelpyUpdatedLoog.png';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { FaArrowLeft } from 'react-icons/fa6';
+import { useNavigate } from 'react-router-dom';
 import Api_Config from '../Api_Config';
 import CustomAlert from './Components/CustomAlert';
 
@@ -22,6 +24,7 @@ function Register() {
     const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
     const [alertMessage, setAlertMessage] = useState('');
     const [alertVisible, setAlertVisible] = useState(false);
+    const navigate = useNavigate();
 
     const submitForm = async (e) => {
         e.preventDefault();
@@ -48,18 +51,29 @@ function Register() {
             setAlertVisible(true);
             return;
         }
-        
+
         try {
             setLoading(true);
             // Register the user with email and password using Firebase
             const userCredential = await createUserWithEmailAndPassword(auth, loginObj.emailId, loginObj.password);
-            console.log("User registered:", userCredential.user);
+            const { uid } = userCredential.user;
 
-            // Save a dummy token or use Firebase's user object in local storage if required
-            localStorage.setItem('token', 'DummyTokenHere');
+            // Automatically log the user in (not strictly necessary, as Firebase automatically signs them in after creation)
+            await signInWithEmailAndPassword(auth, loginObj.emailId, loginObj.password);
+            
+            // Prepare user data
 
-            // Redirect user to the welcome page after registration
-            window.location.href = '/login';
+            const userDetails = {
+                userUID: uid,
+                email: loginObj.emailId,
+                logintype: 'email'
+            };
+
+            console.log("UserDetail = ",userDetails)
+            
+            navigate('/UserDetail', { state: { userData: userDetails } });
+            setAlertMessage('User details not found, please update your profile.');
+
         } catch (error) {
             setAlertMessage(`Registration failed: ${error.message}`);
             setAlertVisible(true);

@@ -7,6 +7,7 @@ import { GiBodyHeight } from "react-icons/gi";
 import { IoMdMan } from "react-icons/io";
 import { debounce } from 'lodash';
 import { FaGhost } from "react-icons/fa";
+import { useNavigate } from 'react-router-dom';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
 import Navbar from './Navbar';
@@ -15,55 +16,65 @@ import InterestButton from './Components/InterestButton';
 function Profiles() {
     const [userData, setUserData] = useState(null);
     const [dbid, setDbid] = useState(null);
+    const navigate = useNavigate();
 
-    // Debounced function to minimize unnecessary calls
-    const debouncedSetPhotoIndex = useMemo(() => debounce(() => { }, 200), []);
-
+    // Fetch user data after dbID is available
     useEffect(() => {
-        // Retrieve localStorage data
         const savedDBID = localStorage.getItem('dbID');
-        setDbid(savedDBID);
-
-        // Fetch user data from API
-        const fetchUserData = async () => {
-            try {
-                const response = await fetch(`${API_CONFIG.BASE_URL}/api/GetUserById?userId=${savedDBID}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': '/',
-                        'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}` // Use environment variable for sensitive keys
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                if (data.length > 0) {
-                    setUserData(data[0]); // Assuming the first object is the user data
-                }
-            } catch (error) {
-                console.error("Error fetching user data:", error);
-            }
-        };
-
         if (savedDBID) {
+            setDbid(savedDBID);  // Save dbID
+            const fetchUserData = async () => {
+                const userId = savedDBID;  // Use dbid as the userId for fetching user data
+                const requestUrl = `${API_CONFIG.BASE_URL}/user/GetUserById?userId=${userId}`;
+
+                console.log("Request URL:", requestUrl); // Log the final URL
+
+                try {
+                    const response = await fetch(requestUrl, {
+                        method: 'POST', // Use POST or GET depending on your API
+                        headers: {
+                            'Accept': '*/*',
+                            'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`, // If needed
+                        },
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    const jsonResponse = await response.json();
+                    console.log("jsonResponse = ", jsonResponse);
+
+                    if (jsonResponse && jsonResponse.data && jsonResponse.data.length > 0) {
+                        const userDetails = jsonResponse.data[0]; // Extract first object in the data array
+                        setUserData(userDetails); // Set the user data
+                        console.log("Fetched user details:", userDetails);
+                    }
+                } catch (error) {
+                    console.error("Error fetching user data:", error);
+                }
+            };
             fetchUserData();
         }
     }, []);
 
+
+
     if (!userData) {
         return null; // Placeholder while fetching data
     }
+    const handleEditProfileClick = () => {
+        // Navigate to the EditProfile page and pass userData as state
+        navigate('/EditProfile', { state: { userData } });
+    };
 
-    const images = userData.imagePaths && userData.imagePaths.length > 0 ? userData.imagePaths : [];
+
+    const profileImage = userData.imageData?.Profile_image || 'default-profile-pic.png'; // Fallback for profile image
     const memberSince = new Date(userData.createdDate).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: '2-digit'
     });
+
+    const bills = userData.bills?.split(',') || []; // Split bills into an array
 
     return (
         <div>
@@ -71,7 +82,7 @@ function Profiles() {
             <div className="relative flex flex-col lg:flex-row w-full max-w-[1400px] m-auto h-full p-4 gap-8">
                 {/* Edit Button */}
                 <button
-                    onClick={() => window.location.href = '/EditProfile'}
+                    onClick={handleEditProfileClick}
                     className="absolute top-6 right-6 px-4 py-2 rounded-full bg-[#e9677b] text-white hover:bg-[#d6556c] transition"
                 >
                     Edit Profile
@@ -81,7 +92,7 @@ function Profiles() {
                     <div className='relative'>
                         <img
                             alt='Profile Pic'
-                            src={userData.imagePaths[0]}
+                            src={profileImage}
                             className="w-full h-96 object-cover object-center rounded-md"
                         />
                     </div>
@@ -145,7 +156,7 @@ function Profiles() {
                             <p className="mt-1 text-base">{userData.city}, {userData.country}</p>
                         </div>
                     </div>
-                    <PhotoProvider>
+                    {/* <PhotoProvider>
                         <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
                             {images.map((image, index) => (
                                 <div key={index} className="relative">
@@ -160,7 +171,7 @@ function Profiles() {
                                 </div>
                             ))}
                         </div>
-                    </PhotoProvider>
+                    </PhotoProvider> */}
                     {/* About Me Section */}
                     <div className="w-full mb-6 bg-white rounded-lg shadow-md p-6 relative">
                         <h2 className="text-[#e9677b] text-lg font-semibold mb-2">About Me</h2>
@@ -187,7 +198,7 @@ function Profiles() {
                         <div>
                             <h2 className="text-[#e9677b] text-lg font-semibold mb-2">{userData.gender === 'Men' ? 'Bills I can Help with' : 'Bills I need Help with'}</h2>
                             <div className="grid grid-cols-2 gap-0 text-gray-800 pl-4">
-                                {userData.bills.map((bill, index) => (
+                                {bills.map((bill, index) => (
                                     <InterestButton key={index} interest={bill} />
                                 ))}
                             </div>

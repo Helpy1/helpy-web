@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 const ProfileTabs = () => {
   const [activeTab, setActiveTab] = useState('Viewed Me');
   const [dbid, setdbid] = useState('')
+  const [CurrentData, setCurrentData] = useState([]);
   const [data, setData] = useState([]); // Holds API response data
   const navigate = useNavigate();
   useEffect(() => {
@@ -28,7 +29,7 @@ const ProfileTabs = () => {
   // Fetch API calls
   const fetchFollowedUsers = async (userId) => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/GetFavoriteUsers?userId=${userId}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/view/GetFavoriteUsers?userId=${userId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,8 +50,8 @@ const ProfileTabs = () => {
 
   const fetchViewedMeUsers = async (userId) => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/GetUserViewedList?userId=${userId}`, {
-        method: 'POST',
+      const response = await fetch(`${API_CONFIG.BASE_URL}/view/GetUserViewsList?userId=${userId}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           Accept: '/',
@@ -59,6 +60,7 @@ const ProfileTabs = () => {
       });
       if (response.ok) {
         const text = await response.text();
+        console.log("GetUserViewsList = ",text)
         return text ? JSON.parse(text) : [];
       }
       console.error(`Error: Server responded with status ${response.status}`);
@@ -70,7 +72,7 @@ const ProfileTabs = () => {
 
   const fetchLikedMeUsers = async (userId) => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/GetUserLikes?userId=${userId}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/view/GetUserLikes?userId=${userId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -100,10 +102,19 @@ const ProfileTabs = () => {
       } else if (tab === 'Followed Me') {
         data = await fetchLikedMeUsers(userId);
       }
+
+      console.log("Data in View Follow is = ", data)
+      if (data && data.data) {
+        setData(data.data || []); // Safely handle null or undefined data
+        console.log("Fetched data without filter:", data.data);
+      } else {
+        console.error("No data found in the response.");
+      }
+
     } catch (error) {
       console.error(`Error fetching data for tab "${tab}":`, error);
     }
-    return data;
+    return data.data;
   };
 
   // Fetch data when the active tab or dbid changes
@@ -133,6 +144,7 @@ const ProfileTabs = () => {
   const handleUserClick = (user) => {
     navigate(`/member/${user.userId}`, { state: { profile: user } }); // Pass user data in state
   };
+  
 
 
 
@@ -169,7 +181,7 @@ const ProfileTabs = () => {
 
         {/* User Cards */}
         <ul className="flex flex-col">
-          {data.length > 0 ? (
+          {data?.length > 0 ? (
             data.map((user, index) => (
               <li key={index} onClick={() => handleUserClick(user)}>
                 <div className="bg-white sm:p-4 p-2 mt-4 rounded-lg shadow-sm w-full flex flex-row">
@@ -177,13 +189,9 @@ const ProfileTabs = () => {
                   <div className="relative w-fit pr-3">
                     <img
                       className="sm:w-[108px] sm:max-h-[144px] max-h-[100px] min-w-[80px] min-h-[100px] sm:min-w-[108px] sm:min-h-[144px] rounded-md object-cover object-center"
-                      src={user.imagePaths[0] || 'https://via.placeholder.com/100'}
+                      src={user.imageData.Profile_image || 'https://via.placeholder.com/100'}
                       alt="Profile"
                     />
-                    <div className="text-white absolute right-5 bottom-1 flex flex-row gap-1 items-center text-[12px]">
-                      <FaCamera />
-                      <span>{user.imagePaths.length}</span>
-                    </div>
                   </div>
 
                   {/* User Details */}
@@ -201,7 +209,7 @@ const ProfileTabs = () => {
                         <span className="text-[14px] text-gray-600">{user.city}, {user.country}</span>
                         <div className="flex flex-row gap-2 text-[12px] md:text-[14px]">
                           <div className="mt-2 flex flex-wrap gap-2">
-                            {user.bills.map((bill, i) => (
+                            {user.bills.split(',').map((bill, i) => (
                               <span
                                 key={i}
                                 className="px-3 py-1 bg-gray-100 text-sm text-gray-600 rounded-full shadow-sm"
