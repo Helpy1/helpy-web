@@ -3,11 +3,19 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
-
+import { FavoritesProvider } from './Pages/Components/Context/FavoritesContext'
+import { FilterProvider } from './Pages/Components/Context/FilterContext';
+import { FilterDataProvider } from './Pages/Components/Context/FilterDataContext';
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    <FavoritesProvider>
+      <FilterDataProvider>
+        <FilterProvider>
+          <App />
+        </FilterProvider>
+      </FilterDataProvider>
+    </FavoritesProvider>
   </React.StrictMode>
 );
 

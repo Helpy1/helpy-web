@@ -14,8 +14,9 @@ import Interest from './Pages/Interest'
 import Member from './Pages/Member';
 import Chat from './Pages/Chat';
 import Profiles from './Pages/Profiles';
-
-
+import EditProfile from './Pages/EditProfile';
+import FavoritesContext from './Pages/Components/Context/FavoritesContext'
+import Ai from './Pages/Ai';
 function App() {
   return (
     <Router>
@@ -24,17 +25,18 @@ function App() {
       <Routes>
         <Route path="/" element={<Splash />} /> {/* Splash Screen as Home Page */}
         <Route path="/login" element={<Login />} />
-        <Route path="/ImageUpload" element={<ImageUpload />} />
         <Route path="/Interest" element={<Interest />} />
         <Route path="/Home" element={<Home />} />
         <Route path="/Register" element={<Registor />} />
         <Route path="/UserDetail" element={<UserDetail />} />
         <Route path="/Search" element={<Search />} />
         <Route path="/Phone" element={<Phone />} />
-        <Route path="/Member" element={<Member />} />
+        <Route path="/Member/:userId" element={<Member />} />
         <Route path="/Footer" element={<Footer />} />
         <Route path="/Chat" element={<Chat />} />
+        <Route path="/4UAi" element={<Ai />} />
         <Route path="/Profiles" element={<Profiles />} />
+        <Route path="/EditProfile" element={<EditProfile />} />
       </Routes>
     </Router>
   );

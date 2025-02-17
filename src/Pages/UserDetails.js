@@ -3,41 +3,54 @@ import { Link, useLocation } from 'react-router-dom';
 import { FaArrowLeft, FaMarsStroke, FaMarsAndVenus, FaPeopleArrows, FaRegCircleXmark } from 'react-icons/fa6';
 import darkLogo from '../Assets/HelpyUpdatedLoog.png';
 import axios from 'axios';
+import { FaTimes } from "react-icons/fa";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from '../firebase/firebase-config';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Slider from "rc-slider";
 import 'rc-slider/assets/index.css';
 import { useNavigate } from 'react-router-dom';
-
+import CustomAlert from './Components/CustomAlert'
+import { FaLocationArrow } from 'react-icons/fa';
+import API_CONFIG from '../Api_Config'
+import CustomLoader from './Components/CustomLoader'
 function UserDetail() {
     const location = useLocation();
     const navigate = useNavigate(); // Initialize navigate
-    const { userUID, email, logintype, userData } = location.state || {};
-    console.log("Login Type = ", logintype)
-    console.log("userUID = ", userUID)
-    console.log("Email = ", email)
-    console.log("userData in UserDetails= ", userData)
+    const { logintype, userData } = location.state || {};
+    // console.log("Received location.state:", location.state);
+    // console.log("Login Type = ", logintype)
+    // console.log("userUID = ", userData)
+    // console.log("userData = ", userData)
+    //console.log("userData in UserDetails= ", userData)
+    const [isLoading, setIsLoading] = useState(true); // State for loader
     const [uploadProgress, setUploadProgress] = useState(0);
     const [loadingLocation, setLoadingLocation] = useState(false); // New loading state
+    const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+    const [searchText, setSearchText] = useState('');
+    const [suggestions, setSuggestions] = useState([]);
     const INITIAL_LOGIN_OBJ = {
         name: '',
         location: '',
         dateOfBirth: '',
         occupation: '',
         description: '',
+        email: '',
         intentions: ''
     };
 
     const [loginObj, setLoginObj] = useState(INITIAL_LOGIN_OBJ);
     const [errorMessage, setErrorMessage] = useState('');
     const [showForm, setShowForm] = useState(1);
+    const [email, setEmail] = useState(userData.email || ''); // Add this line
     const [gender, setGender] = useState('');
     const [sexuality, setSexuality] = useState('');
     const [ethnicity, setEthnicity] = useState('');
     const [selectedBills, setSelectedBills] = useState([]);
     const [imageFiles, setImageFiles] = useState([]);
     const [height, setHeight] = useState(60);
-    const [language, setLanguage] = useState('');
+    const [language, setLanguage] = useState('English');
     const [bodyType, setBodyType] = useState('');
     const [smoking, setSmoking] = useState('');
     const [drinking, setDrinking] = useState('');
@@ -52,6 +65,10 @@ function UserDetail() {
     const [latitude, setLatitude] = useState(null);
     const [longitude, setLongitude] = useState(null);
     const [birthday, setBirthday] = useState('');
+    const [publicImages, setPublicImages] = useState([]);
+    const [privateImages, setPrivateImages] = useState([]);
+    const [selectedProfileImage, setSelectedProfileImage] = useState(null);
+    const [alertMessage, setAlertMessage] = useState('');
     const [age, setAge] = useState('');
     const [fullName, setFullName] = useState('');
     const [privatePhotos, setPrivatePhotos] = useState([]);
@@ -59,8 +76,35 @@ function UserDetail() {
     const [imageUrls, setImageUrls] = useState([]);  // URLs of selected images
     const [imageTypes, setImageTypes] = useState([]); // Types (profile/private) of selected images
     const [languageItems, setLanguageItems] = useState([]); // New state for fetched languages
+    const maxTotalImages = 8; // Maximum total images
+    const [alertVisible, setAlertVisible] = useState(false);
+    const [value, setValue] = useState('')
+
+    const fullNameWithoutSpecialChars = (e) => {
+        const inputName = e.target.value;
+        const specialCharRegex = /[!@#$%^&*]/g; // Only match @#$%^&* special characters
+
+        // Check for special characters
+        if (specialCharRegex.test(inputName)) {
+            setAlertVisible(true);
+            setAlertMessage("Special Characters are not allowed");
+        } else {
+            setAlertVisible(false); // Hide the alert if no special characters
+        }
+
+        // Remove special characters and set the value
+        const newName = inputName.replace(specialCharRegex, "");
+        setValue(newName); // Update input field value
+        setFullName(newName)
+    };
+
+
+
+    // alert(fullName)
+
     // Function to fetch languages from the API
     const fetchLanguages = async () => {
+
         try {
             const response = await fetch('https://restcountries.com/v3.1/all');
             const data = await response.json();
@@ -72,73 +116,155 @@ function UserDetail() {
                     });
                 }
             });
-            const sortedLanguages = [...languageSet].sort().map(language => ({
-                label: language,
-                value: language,
-            }));
-            setLanguageItems(sortedLanguages);
+
+            // Convert to an array, sort alphabetically, and move "English" to the top
+            const sortedLanguages = [...languageSet].sort((a, b) => {
+                if (a === 'English') return -1; // Move "English" to the top
+                if (b === 'English') return 1;
+                return a.localeCompare(b); // Sort alphabetically for others
+            });
+
+            // Map the sorted array to the expected structure
+            setLanguageItems(sortedLanguages.map(language => ({ label: language, value: language })));
+
+
+            // const sortedLanguages = [...languageSet].sort().map(language => ({
+            //     label: language,
+            //     value: language,
+            // }));
+            // setLanguageItems(sortedLanguages);
         } catch (error) {
             console.error('Error fetching languages:', error);
         }
     };
 
-    // Fetch user location on component mount
-    useEffect(() => {
-        const getUserLocation = () => {
-            setLoadingLocation(true); // Start loading when fetching begins
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const { latitude, longitude } = position.coords;
-                        setLatitude(latitude);
-                        setLongitude(longitude);
-                        fetchCityCountry(latitude, longitude);
-                        setLoadingLocation(false); // Stop loading when done
-                    },
-                    (error) => {
-                        window.alert("Location is required to proceed."); // Show alert if location is not set
-                        setErrorMessage("Unable to get your location");
-                        setLoadingLocation(false); // Stop loading if there's an error
-                    }
-                );
+
+    const handleSelectImages = (isPublic) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = "image/*";
+        input.multiple = true;
+
+        input.onchange = (e) => {
+            const files = Array.from(e.target.files).map((file) => URL.createObjectURL(file));
+            const remainingSlots = maxTotalImages - publicImages.length - privateImages.length;
+
+            if (files.length > remainingSlots) {
+                setAlertMessage(`You can only add ${remainingSlots} more image(s).`);
+                return;
+            }
+
+            if (isPublic) {
+                const updatedPublicImages = [...publicImages, ...files].slice(0, maxTotalImages - privateImages.length);
+                setPublicImages(updatedPublicImages);
+
+                if (!selectedProfileImage && updatedPublicImages.length > 0) {
+                    setSelectedProfileImage(updatedPublicImages[0]); // Automatically set the first public image as the profile image
+                }
             } else {
-                setErrorMessage("Geolocation is not supported by this browser.");
-                setLoadingLocation(false); // Stop loading if geolocation is unavailable
+                const updatedPrivateImages = [...privateImages, ...files].slice(0, maxTotalImages - publicImages.length);
+                setPrivateImages(updatedPrivateImages);
             }
         };
 
-        getUserLocation();
-    }, []);
+        input.click();
+    };
 
-    // Fetch city and country using Google Maps Geocoding API
-    const fetchCityCountry = async (latitude, longitude) => {
-        const API_KEY = 'AIzaSyDIARYnW2OXbfRa_UC7caDWDakUwuJgJBw'; // Replace with your actual Google Maps API key
-        const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${API_KEY}`;
 
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
-            if (data.status === 'OK') {
-                const addressComponents = data.results[0].address_components;
-                const cityComponent = addressComponents.find(component =>
-                    component.types.includes('locality')
+    const handleSetProfileImage = (uri) => {
+        setSelectedProfileImage(uri);
+    };
+
+
+
+    const fetchSuggestions = async (input) => {
+        if (input.length > 2) {
+            try {
+                const response = await axios.get(
+                    `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${input}&key=${API_CONFIG.YOUR_GOOGLE_API_KEY}`
                 );
-                const countryComponent = addressComponents.find(component =>
-                    component.types.includes('country')
-                );
-
-                setCity(cityComponent ? cityComponent.long_name : '');
-                setCountry(countryComponent ? countryComponent.long_name : '');
-                console.log(city)
-                console.log(country)
-            } else {
-                setErrorMessage("Error retrieving city and country.");
+                setSuggestions(response.data.predictions);
+            } catch (error) {
+                console.error('Error fetching place suggestions:', error);
             }
-        } catch (error) {
-            setErrorMessage("Error fetching location data.");
-            console.error("Error fetching location:", error);
+        } else {
+            setSuggestions([]);
         }
     };
+
+    const handleCloseAlert = () => {
+        setAlertVisible(false);
+        setAlertMessage('');
+    };
+
+
+
+    const fetchCurrentLocation = async () => {
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser');
+            return;
+        }
+
+        setIsFetchingLocation(true);
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                setLatitude(latitude);
+                setLongitude(longitude);
+
+                try {
+                    const response = await axios.get(
+                        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${API_CONFIG.YOUR_GOOGLE_API_KEY}`
+                    );
+
+                    const addressComponents = response.data.results[0].address_components;
+                    const cityComponent = addressComponents.find((c) => c.types.includes('locality'));
+                    const countryComponent = addressComponents.find((c) => c.types.includes('country'));
+
+                    const fetchedCity = cityComponent ? cityComponent.long_name : '';
+                    const fetchedCountry = countryComponent ? countryComponent.long_name : '';
+
+                    setCity(fetchedCity);
+                    setCountry(fetchedCountry);
+                    setSearchText(`${fetchedCity}, ${fetchedCountry}`);
+                } catch (error) {
+                    console.error('Error fetching location details:', error);
+                }
+
+                setIsFetchingLocation(false);
+            },
+            (error) => {
+                console.error('Error fetching location:', error);
+                setIsFetchingLocation(false);
+            },
+            { enableHighAccuracy: true }
+        );
+    };
+
+    const handleSuggestionClick = async (placeId) => {
+        try {
+            const response = await axios.get(
+                `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${API_CONFIG.YOUR_GOOGLE_API_KEY}`
+            );
+
+            const location = response.data.result.geometry.location;
+            const addressComponents = response.data.result.address_components;
+
+            const cityComponent = addressComponents.find((c) => c.types.includes('locality'));
+            const countryComponent = addressComponents.find((c) => c.types.includes('country'));
+
+            setCity(cityComponent ? cityComponent.long_name : '');
+            setCountry(countryComponent ? countryComponent.long_name : '');
+            setLatitude(location.lat);
+            setLongitude(location.lng);
+            setSearchText(`${cityComponent ? cityComponent.long_name : ''}, ${countryComponent ? countryComponent.long_name : ''}`);
+            setSuggestions([]);
+        } catch (error) {
+            console.error('Error fetching place details:', error);
+        }
+    };
+
 
     // Fetch languages on component mount
     useEffect(() => {
@@ -148,7 +274,15 @@ function UserDetail() {
     useEffect(() => {
         const fetchBillsData = async () => {
             try {
-                const response = await fetch('https://usamaanwar-001-site1.atempurl.com/api/account/GetAllBills')
+                const response = await fetch(`${API_CONFIG.BASE_URL}/api/account/GetAllBills`, {
+                    method: 'GET', // Specify the HTTP method
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': '/', // Updated to use '*/*' for all content types
+                        'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`, // Use your API config key
+                    },
+                });
+
                 const data = await response.json();
                 setBillsData(data.filter(bill => bill.isActive));
             } catch (err) {
@@ -168,219 +302,510 @@ function UserDetail() {
         );
     };
 
-    // Initial image selection handler to set profile or private tags
-    const handleImageChange = (event) => {
-        const files = Array.from(event.target.files);
-        setImageFiles(files); // Ensure files are added to imageFiles
-        const urls = files.map((file) => URL.createObjectURL(file)); // Create URLs for preview
-        setImageUrls((prevUrls) => [...prevUrls, ...urls].slice(0, 8)); // Limit to 8 images
-        setImageTypes((prevTypes) => [...prevTypes, ...Array(files.length).fill('')].slice(0, 8)); // No default tag
-    };
-
-    // Toggle image type for marking profile, private, or post images
-    const toggleImageType = (index) => {
-        setImageTypes((prevImageTypes) => {
-            const newImageTypes = [...prevImageTypes];
-
-            if (newImageTypes[index] === '' && !newImageTypes.includes('profile')) {
-                // Set as profile if no profile image is selected
-                newImageTypes[index] = 'profile';
-            } else if (newImageTypes[index] === 'profile') {
-                // If profile image is clicked again, keep it as profile (disable further toggling)
-                return newImageTypes;
-            } else {
-                // Toggle between private and post (untagged)
-                newImageTypes[index] = newImageTypes[index] === 'private' ? '' : 'private';
-            }
-
-            return newImageTypes;
-        });
-    };
-
-
-
     // Handle image removal
-    const handleRemoveImage = (index) => {
-        setImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
-        setImageTypes((prevTypes) => prevTypes.filter((_, i) => i !== index));
+    const handleRemoveImage = (uri, isPublic) => {
+        if (isPublic) {
+            const updatedPublicImages = publicImages.filter((imageUri) => imageUri !== uri);
+            setPublicImages(updatedPublicImages);
+
+            if (selectedProfileImage === uri) {
+                setSelectedProfileImage(updatedPublicImages[0] || null); // Reset profile image if removed
+            }
+        } else {
+            setPrivateImages(privateImages.filter((imageUri) => imageUri !== uri));
+        }
     };
-
-    // Firebase upload function
-    const uploadImageToFirebase = async (file, imagePath) => {
-        return new Promise((resolve, reject) => {
-            const imageRef = ref(storage, imagePath);
-            const uploadTask = uploadBytesResumable(imageRef, file);
-
-            uploadTask.on(
-                'state_changed',
-                (snapshot) => {
-                    // Update progress
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    setUploadProgress(progress); // Update state with progress percentage
-                },
-                (error) => {
-                    console.error("Firebase upload error:", error);
-                    reject(error); // Propagate error if upload fails
-                },
-                async () => {
-                    // On successful upload, get the download URL
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    resolve(downloadURL);
-                }
-            );
-        });
-    };
-
 
     // Submit form and upload images
     const handleSubmitForm = async (e) => {
         e.preventDefault();
-        if (imageFiles.length === 0) {
-            setErrorMessage("Please upload at least one image.");
-            return;
-        }
+        // const uploadedImagesArray = [];
+        // let privateImageIndex = 1;
+        // let postImageIndex = 1;
 
-        const uploadedImagesArray = [];
-        let privateImageIndex = 1;
-        let postImageIndex = 1;
+        // try {
+        //     for (let i = 0; i < imageFiles.length; i++) {
+        //         const file = imageFiles[i];
+        //         const imageType = imageTypes[i];
+        //         let imageName;
+
+        //         if (imageType === 'profile') {
+        //             imageName = 'profile_image';
+        //         } else if (imageType === 'private') {
+        //             imageName = `private_image_${privateImageIndex}`;
+        //             privateImageIndex++;
+        //         } else {
+        //             imageName = `post_image_${postImageIndex}`;
+        //             postImageIndex++;
+        //         }
+
+        //         const imagePath = `Images/${userUID}/${imageName}`;
+        //         const imageUrl = await uploadImageToFirebase(file, imagePath);
+
+        //         uploadedImagesArray.push({ key: imageName, url: imageUrl });
+        //     }
+
+        //     setUploadedImages(uploadedImagesArray);
+        //     console.log("Uploaded Images:", uploadedImagesArray);
+        //     setShowForm(5);
+        // } catch (error) {
+        //     console.error("Error uploading images:", error);
+        //     setErrorMessage("Error uploading images. Please try again.");
+        // }
+    };
+
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true); // Show loader before the process starts
 
         try {
-            for (let i = 0; i < imageFiles.length; i++) {
-                const file = imageFiles[i];
-                const imageType = imageTypes[i];
-                let imageName;
-
-                if (imageType === 'profile') {
-                    imageName = 'profile_image';
-                } else if (imageType === 'private') {
-                    imageName = `private_image_${privateImageIndex}`;
-                    privateImageIndex++;
-                } else {
-                    imageName = `post_image_${postImageIndex}`;
-                    postImageIndex++;
-                }
-
-                const imagePath = `Images/${userUID}/${imageName}`;
-                const imageUrl = await uploadImageToFirebase(file, imagePath);
-
-                uploadedImagesArray.push({ key: imageName, url: imageUrl });
+            // Validate inputs
+            if (publicImages.length + privateImages.length === 0) {
+                setAlertMessage('Please upload at least one image.');
+                setIsLoading(false);
+                return;
             }
 
-            setUploadedImages(uploadedImagesArray);
-            console.log("Uploaded Images:", uploadedImagesArray);
+            if (!selectedProfileImage) {
+                setAlertMessage('Please set a profile image.');
+                setIsLoading(false);
+                return;
+            }
+
+            const formData = new FormData();
+
+            // Add public images to formData with custom names
+            for (let index = 0; index < publicImages.length; index++) {
+                const uri = publicImages[index];
+                const name = uri === selectedProfileImage ? 'Profile_image' : `Post_${index + 1}`;
+
+                // Fetch the image as a Blob, and then create a File object
+                const imageBlob = await fetch(uri).then(res => res.blob());
+                const imageFile = new File([imageBlob], name, { type: 'image/jpeg' });
+
+                formData.append('imageFiles', imageFile);
+            }
+
+            // Add private images to formData with custom names
+            for (let index = 0; index < privateImages.length; index++) {
+                const uri = privateImages[index];
+
+                // Fetch the image as a Blob, and then create a File object
+                const imageBlob = await fetch(uri).then(res => res.blob());
+                const imageFile = new File([imageBlob], `Private_Photo_${index + 1}`, { type: 'image/jpeg' });
+
+                formData.append('imageFiles', imageFile);
+            }
+
+            console.log("form Data = ", formData);
+
+            // Log the FormData content
+            console.log("FormData content:");
+            formData.forEach((value, key) => {
+                if (value instanceof File) {
+                    console.log(`Key: ${key}, File Name: ${value.name}, File Type: ${value.type}, File Size: ${value.size} bytes`);
+                } else {
+                    console.log(`Key: ${key}, Value: ${value}`);
+                }
+            });
+
+            const response = await axios.post(
+                `${API_CONFIG.BASE_URL}/api/UploadListOfImagesToGoogleBucket?gUid=${userData?.userUID}`, // Include gUid in the URL
+                formData,
+                {
+                    headers: {
+                        'Accept': '*/*',
+                        'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`, // Authorization token if needed
+                        'Content-Type': 'multipart/form-data',
+                    },
+                }
+            );
+
+            // Updated response handling
+            const updatedResponse = response.data.map(item => ({
+                key: item.fileName,
+                url: item.imageLink,
+            }));
+
+            console.log('Updated Response:', updatedResponse);
+
+            setUploadedImages(updatedResponse);
             setShowForm(5);
         } catch (error) {
-            console.error("Error uploading images:", error);
-            setErrorMessage("Error uploading images. Please try again.");
+            if (error.response) {
+                // Handle specific error responses
+                if (error.response.status === 413) {
+                    showAlert('The images are too large. Please reduce their size and try again.');
+                } else {
+                    console.error('Error uploading images:', error.response.data);
+                    showAlert('There was an issue uploading your images. Please try again.');
+                }
+            } else {
+                // Catch other errors (e.g., network errors)
+                console.error('Error uploading images:', error.message);
+                showAlert('An unexpected error occurred. Please try again.');
+            }
+        } finally {
+            setIsLoading(false); // Hide loader after the process ends
         }
     };
 
 
 
     // Final submit function to handle the entire form submission
-    const submitForm = () => {
-        const uGuid = userData ? userData.uid : userUID;  // Set uGuid based on condition
-    
-        const formData = {
-            useradditionalData: {
-                ageRange: [0, 0],
-                bodyType: bodyType || 'string',
-                children: children || 'string',
-                drinking: drinking || 'string',
-                education: education || 'string',
-                heightInInches: height || 0,
-                language: language || 'string',
-                relationshipStatus: relationshipStatus || 'string',
-                smoking: smoking || 'string'
-            },
-            uGuid: uGuid,
-            age: age || 0,
-            birthday: birthday || 'string',
-            description: loginObj.description || 'string',
-            intentions: loginObj.intentions || 'string',
-            email: email || userData?.email,
-            password: '',
-            ethnicity: ethnicity || 'string',
-            fullName: fullName || 'string',
-            gender: gender || 'string',
-            occupation: loginObj.occupation || 'string',
-            selectedItems: selectedBills || [0],
-            images: uploadedImages,
-            sexuality: sexuality || 'string',
-            type: logintype || userData?.logintype,
-            city: city || 'string',
-            country: country || 'string',
-            longitude: String(longitude || ''),
-            latitude: String(latitude || ''),
-            lookingFor: lookingfor || 'string'
-        };
-    
-        console.log("Final form data:", formData);
-    
-        // Make the POST request
-        fetch('https://usamaanwar-001-site1.atempurl.com/api/account/registerthirdpartyuser', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        })
-            .then(response => response.json())
-            .then(data => {
-                console.log('API response from POST:', data);
-    
-                // Make the GET request with the user UID based on the condition
-                return fetch(`https://usamaanwar-001-site1.atempurl.com/api/account/GetUserDetail?uGuid=${uGuid}`, {
+    // const submitForm = async () => {
+    //     // Ensure we are using the correct email based on the logintype
+    //     const finalEmail = logintype === 'phone' || logintype === 'facebook' ? email : (userData?.email || email);
+
+    //     if (!finalEmail) {
+    //         setAlertMessage('Email is required.');
+    //         setAlertVisible(true);
+    //         return;
+    //     }
+
+    //     //const uGuid = userData ? userData.uid : userData.userUID;  // Set uGuid based on condition
+    //     //setIsLoading(true); // Show loader before form submission starts
+    //     try {
+    //         const formData = {
+    //             useradditionalData: {
+    //                 ageRange: [0, 0],
+    //                 bodyType: bodyType || 'string',
+    //                 children: children || 'string',
+    //                 drinking: drinking || 'string',
+    //                 education: education || 'string',
+    //                 heightInInches: height || 0,
+    //                 language: language || 'string',
+    //                 relationshipStatus: relationshipStatus || 'string',
+    //                 smoking: smoking || 'string'
+    //             },
+    //             uGuid: userData.userUID,
+    //             age: age || 0,
+    //             birthday: birthday || 'string',
+    //             description: loginObj.description || 'string',
+    //             intentions: loginObj.intentions || 'string',
+    //             email: finalEmail, // Use the resolved email here
+    //             password: '',
+    //             ethnicity: ethnicity || 'string',
+    //             fullName: fullName || 'string',
+    //             gender: gender || 'string',
+    //             occupation: loginObj.occupation || 'string',
+    //             selectedItems: selectedBills || [0],
+    //             images: uploadedImages,
+    //             sexuality: sexuality || 'string',
+    //             type: logintype || userData?.logintype,
+    //             city: city || 'string',
+    //             country: country || 'string',
+    //             longitude: String(longitude || ''),
+    //             latitude: String(latitude || ''),
+    //             lookingFor: lookingfor || 'string'
+    //         };
+
+    //         console.log("formData = ",formData)
+    //         // Submit form data
+    //         const response = await fetch(`${API_CONFIG.BASE_URL}/api/account/registerthirdpartyuser`, {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //                 'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+    //             },
+    //             body: JSON.stringify(formData),
+    //         });
+
+    //         if (!response.ok) {
+    //             throw new Error('Form submission failed');
+    //         }
+
+    //         const data = await response.json();
+    //         console.log('Form submitted successfully:', data);
+
+    //         const response2 = await fetch(
+    //             `${API_CONFIG.BASE_URL}/api/account/GetUserDetail?uGuid=${userData.userUID}`,
+    //             {
+    //                 method: 'GET',
+    //                 headers: {
+    //                     'Content-Type': 'application/json',
+    //                     'Accept': '/',
+    //                     'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+    //                 },
+    //             }
+    //         );
+
+    //         if (response2.status === 200) {
+    //             const userData = await response2.json(); // Parse response data as JSON
+    //             navigate('/Home', { state: { data: userData } });
+    //         } 
+
+    //     } catch (error) {
+    //         console.error('Error submitting form:', error);
+    //         setAlertMessage('Error submitting form. Please try again.');
+    //     } finally {
+    //         setIsLoading(false); // Hide loader after form submission
+    //     }
+    // };
+
+    const submitForm = async () => {
+        // Ensure we are using the correct email based on the login type
+        const finalEmail = userData.logintype === 'phone' || userData.logintype === 'facebook' ? email : (userData?.email || email);
+
+        if (!finalEmail) {
+            setAlertMessage('Email is required.');
+            setAlertVisible(true);
+            return;
+        }
+        setIsLoading(true)
+        try {
+            // Prepare form data
+            const formData = {
+                useradditionalData: {
+                    ageRange: [0, 0],
+                    bodyType: bodyType || 'string',
+                    children: children || 'string',
+                    drinking: drinking || 'string',
+                    education: education || 'string',
+                    heightInInches: height || 0,
+                    language: language || 'string',
+                    relationshipStatus: relationshipStatus || 'string',
+                    smoking: smoking || 'string'
+                },
+                uGuid: userData?.userUID,
+                age: age || 0,
+                birthday: birthday || 'string',
+                description: loginObj.description || 'string',
+                intentions: loginObj.intentions || 'string',
+                email: finalEmail,
+                password: '',
+                ethnicity: ethnicity || 'string',
+                fullName: fullName || 'string',
+                gender: gender || 'string',
+                occupation: loginObj.occupation || 'string',
+                selectedItems: selectedBills || [0],
+                images: uploadedImages,
+                sexuality: sexuality || 'string',
+                type: logintype || userData.logintype,
+                city: city || 'string',
+                country: country || 'string',
+                longitude: String(longitude || ''),
+                latitude: String(latitude || ''),
+                lookingFor: lookingfor || 'string'
+            };
+            setIsLoading(false)
+            //console.log("formData = ", formData);
+
+            // Show loading indicator
+
+
+            setIsLoading(true)
+            // Submit the registration form
+            const response = await fetch(`${API_CONFIG.BASE_URL}/api/account/registerthirdpartyuser`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+                },
+                body: JSON.stringify(formData),
+            });
+
+            if (!response.ok) {
+                throw new Error('Form submission failed');
+            }
+            setIsLoading(false)
+
+            const registrationData = await response.json();
+            console.log('Form submitted successfully:', registrationData);
+
+            // If registration is successful, fetch user data
+            setIsLoading(true)
+            const response2 = await fetch(
+                `${API_CONFIG.BASE_URL}/api/account/GetUserDetail?uGuid=${userData.userUID}`,
+                {
                     method: 'GET',
                     headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-            })
-            .then(response => response.json())
-            .then(userData => {
-                console.log('API response from GET:', userData);
-    
-                // Navigate to /Home with state containing user data
-                navigate('/Home', { state: { data: userData } });
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                // Handle error here
-            });
-    };
+                        'Content-Type': 'application/json',
+                        'Accept': '/',
+                        'Authorization': `${API_CONFIG.AUTHORIZATION_KEY}`,
+                    },
+                }
+            );
+            setIsLoading(false)
 
+            if (response2.status === 200) {
+                const userDetail = await response2.json(); // Parse response data as JSON
+                console.log('User details:', userDetail);
 
-    const handleNextForm = () => {
-        if (!city || !country) {
-            window.alert("Location is required to proceed.");  // Show error if location is not set
-        } else {
-            setErrorMessage(""); // Clear error message
-            setShowForm((prev) => prev + 1); // Increment to go to the next form
+                // Navigate to home page with user data
+                navigate('/Home', { state: { data: userDetail } });
+            } else {
+                throw new Error('Failed to fetch user details');
+            }
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            setAlertMessage('Error submitting form. Please try again.');
+            setAlertVisible(true); // Show error alert
+        } finally {
+            setIsLoading(false); // Hide loader after form submission
         }
     };
+
+
+    const showAlert = (message) => {
+        setAlertMessage(message);
+        setAlertVisible(true);
+    };
+
+    const validateEmail = async () => {
+        if (!email) {
+            showAlert('Email is required.');
+            return false;
+        }
+        setIsLoading(true)
+        try {
+            const apiUrl = `${API_CONFIG.BASE_URL}/api/account/ValidateUserByEmail?email=${email}`;
+            console.log("Appi URl = ", apiUrl)
+            const response = await axios.get(apiUrl, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `${API_CONFIG.AUTHORIZATION_KEY}`,
+                },
+            });
+
+            if (response.status === 200) {
+                showAlert('Email already in use');
+                return false;
+            }
+        } catch (error) {
+            if (error.response && error.response.status === 400) {
+                console.log("Email not in use")
+                return true; // Email does not exist
+            } else {
+                showAlert('Failed to validate email. Please try again.');
+                return false;
+            }
+        }
+        finally {
+            setIsLoading(false)
+        }
+        return false;
+    };
+
+
+    const handleNextForm = async (e) => {
+
+        e.preventDefault();
+        console.log("I am here")
+        console.log("Full Name = ", fullName)
+        console.log("birthday = ", birthday)
+        console.log("city = ", city)
+        console.log("country = ", country)
+
+        if (!fullName || !birthday || !city || !country) {
+            setAlertMessage('Please fill in all required fields');
+            setAlertVisible(true);
+            return;
+        }
+
+        if (logintype === 'phone' || logintype === 'facebook') {
+            const isEmailValid = await validateEmail();
+            if (!isEmailValid) return false;
+        }
+        console.log("I am out")
+        const birthDate = new Date(birthday);
+        const today = new Date();
+        let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+        const monthDifference = today.getMonth() - birthDate.getMonth();
+        if (
+            monthDifference < 0 ||
+            (monthDifference === 0 && today.getDate() < birthDate.getDate())
+        ) {
+            calculatedAge--;
+        }
+
+        if (calculatedAge < 18) {
+            setAlertMessage('You must be at least 18 years old to use this application.');
+            setAlertVisible(true);
+            return;
+        }
+
+        setAge(calculatedAge);
+        if (email) {
+            const validateEmail = async () => {
+                if (!email) {
+                    showAlert('Email is required.');
+                    return false;
+                }
+                setIsLoading(true)
+                try {
+                    const apiUrl = `${API_CONFIG.BASE_URL}/api/account/ValidateUserByEmail?email=${email}`;
+                    console.log("Appi URl = ", apiUrl)
+                    const response = await axios.get(apiUrl, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `${API_CONFIG.AUTHORIZATION_KEY}`,
+                        },
+                    });
+
+                    if (response.status === 200) {
+                        showAlert('Email already in use');
+                        return false;
+                    }
+                } catch (error) {
+                    if (error.response && error.response.status === 400) {
+                        console.log("Email not in use")
+                        return true; // Email does not exist
+                    } else {
+                        showAlert('Failed to validate email. Please try again.');
+                        return false;
+                    }
+                }
+                finally {
+                    setIsLoading(false)
+                }
+                return false;
+            };
+
+            validateEmail()
+        }
+        setShowForm((prev) => prev + 1); // Move to the next form
+    };
+
+    const totalImages = publicImages.length + privateImages.length;
 
     return (
         <div className="min-h-screen bg-base-200 flex items-center">
             <div className="card mx-auto w-full max-w-[500px]">
+                <CustomAlert
+                    isVisible={alertVisible}
+                    onClose={handleCloseAlert}
+                    animationSource={require('../Assets/Animations/Animation - 1728995823405.json')}
+                    message={alertMessage}
+                />
                 {showForm === 1 && (
                     <div className="py-24 px-10 flex justify-center flex-col items-center">
                         <Link to="/" className="fixed top-4 left-6 inline-block bg-white rounded-[100%] p-3">
                             <FaArrowLeft className='text-[#e9677b]' />
                         </Link>
+
                         <img className="w-[250px] h-auto mb-5" src={darkLogo} alt="Helpy Logo" />
-                        <form onSubmit={(e) => {
-                            e.preventDefault();
-                            handleNextForm(); // Move to next form on submit
-                        }} className="w-full">
+                        <form onSubmit={handleNextForm} className="w-full">
                             <div className="mb-4">
                                 <input
                                     type="text"
                                     defaultValue={loginObj.name}
+                                    value={value}
                                     placeholder="Name"
                                     className="w-full border border-gray-300 rounded-[16px] px-4 py-2 text-gray-700"
-                                    onChange={(e) => setFullName(e.target.value)}
+                                    onChange={fullNameWithoutSpecialChars}
                                 />
+                                {(userData.logintype === 'phone' || userData.logintype === 'facebook') && (
+                                    <input
+                                        type="email"
+                                        defaultValue={loginObj.email}
+                                        placeholder="Email"
+                                        className="w-full border border-gray-300 rounded-[16px] px-4 py-2 text-gray-700 mt-4"
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                    />
+                                )}
                                 <input
                                     type="date"
                                     defaultValue={loginObj.dateOfBirth}
@@ -392,16 +817,44 @@ function UserDetail() {
                                         setAge(today.getFullYear() - birthDate.getFullYear());
                                     }}
                                 />
-                                {loadingLocation ? (
-                                    <p className="text-gray-500 mt-4">Fetching location...</p>
-                                ) : (
+
+                                <div className="w-full border  flex items-center border-gray-300 rounded-[16px] mt-4 text-gray-700">
                                     <input
                                         type="text"
-                                        value={`${city}, ${country}`} // Display city and country
-                                        placeholder="Location"
-                                        className="w-full border border-gray-300 rounded-[16px] px-4 py-2 text-gray-700 mt-4"
-                                        readOnly // Make this read-only if it's automatically populated
+                                        className="flex-grow px-3 py-2 bg-transparent outline-none border-0 rounded-s-[16px]"
+                                        placeholder="Search City or Country"
+                                        value={searchText}
+                                        onChange={(e) => {
+                                            setSearchText(e.target.value);
+                                            fetchSuggestions(e.target.value);
+                                        }}
                                     />
+                                    <button
+                                        className="p-2 bg-[#e9677b] text-white rounded-full flex items-center justify-center ml-2 mr-2"
+                                        onClick={fetchCurrentLocation}
+                                        disabled={isFetchingLocation}
+                                    >
+                                        <FaLocationArrow />
+                                    </button>
+                                </div>
+
+                                {suggestions.length > 0 && (
+                                    <ul className="absolute mt-1 bg-white border rounded-lg shadow-lg z-10">
+                                        {suggestions.map((suggestion) => (
+                                            <li
+                                                key={suggestion.place_id}
+                                                className="p-2 cursor-pointer hover:bg-gray-200"
+                                                onClick={() => handleSuggestionClick(suggestion.place_id)}
+                                            >
+                                                {suggestion.description}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                                {city && country && (
+                                    <p className="mt-2 text-gray-500">
+                                        Selected Location: <strong>{`${city}, ${country}`}</strong>
+                                    </p>
                                 )}
                             </div>
                             {errorMessage && <p className="text-red-500 text-center mb-4">{errorMessage}</p>}
@@ -423,6 +876,11 @@ function UserDetail() {
                         <img className="w-[250px] h-auto mb-9" src={darkLogo} alt="Helpy Logo" />
                         <form onSubmit={(e) => {
                             e.preventDefault();
+                            if (!gender || !sexuality || !ethnicity || !lookingfor) {
+                                setAlertMessage('Please fill in all required fields');
+                                setAlertVisible(true);
+                                return;
+                            }
                             if (gender && sexuality && ethnicity && lookingfor) {
                                 setShowForm(3); // Move to next form if all fields are filled
                             } else {
@@ -437,22 +895,20 @@ function UserDetail() {
                                     required
                                 >
                                     <option value="" disabled>Select Gender</option>
-                                    <option value="men">Men</option>
-                                    <option value="women">Women</option>
-                                    <option value="other">Other</option>
+                                    <option value="Men">Man</option>
+                                    <option value="Women">Woman</option>
                                 </select>
 
                                 <label className="block mb-2 text-[#f86a82] text-center font-semibold">Your Sexuality</label>
                                 <div className="flex justify-between mb-4">
                                     {[
-                                        { value: 'straight', label: 'Straight', icon: <FaMarsStroke className='text-2xl' /> },
-                                        { value: 'gay', label: 'Gay', icon: <FaPeopleArrows className='text-2xl' /> },
-                                        { value: 'bisexual', label: 'Bisexual', icon: <FaMarsAndVenus className='text-2xl' /> }
+                                        { value: 'Straight', label: 'Straight', icon: <FaMarsStroke className='text-2xl' /> },
+                                        { value: 'Gay', label: 'Gay', icon: <FaPeopleArrows className='text-2xl' /> },
                                     ].map(option => (
                                         <button
                                             key={option.value}
                                             type="button"
-                                            className={`w-[30%] flex flex-col justify-center items-center gap-2 px-2 py-6 rounded-[16px] ${sexuality === option.value ? 'bg-[#f86a82] text-white' : 'bg-gray-200'
+                                            className={`flex-1 mx-2 flex flex-col justify-center items-center gap-2 px-2 py-6 rounded-[16px] ${sexuality === option.value ? 'bg-[#f86a82] text-white' : 'bg-gray-200'
                                                 }`}
                                             onClick={() => setSexuality(option.value)}
                                         >
@@ -462,6 +918,7 @@ function UserDetail() {
                                     ))}
                                 </div>
 
+
                                 <label className="block mb-2 text-[#f86a82] font-semibold text-center">Your Ethnicity</label>
                                 <select
                                     className="w-full border rounded-[16px] p-2 mb-4"
@@ -470,12 +927,24 @@ function UserDetail() {
                                     required
                                 >
                                     <option value="" disabled>Select Ethnicity</option>
-                                    <option value="asian">Asian</option>
-                                    <option value="black">Black</option>
-                                    <option value="hispanic">Hispanic</option>
-                                    <option value="white">White</option>
-                                    <option value="other">Other</option>
+                                    {[
+                                        { label: 'Black/African Descent', value: 'Black/African Descent' },
+                                        { label: 'East Asian', value: 'East Asian' },
+                                        { label: 'Hispanic/Latino', value: 'Hispanic/Latino' },
+                                        { label: 'Middle Eastern', value: 'Middle Eastern' },
+                                        { label: 'Native American', value: 'Native American' },
+                                        { label: 'Pacific Islander', value: 'Pacific Islander' },
+                                        { label: 'South Asian', value: 'South Asian' },
+                                        { label: 'Southeast Asian', value: 'Southeast Asian' },
+                                        { label: 'White/Caucasian', value: 'White/Caucasian' },
+                                        { label: 'Other', value: 'Other' }
+                                    ].map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
                                 </select>
+
 
                                 <label className="block mb-2 text-[#f86a82] font-semibold text-center">What are you looking for</label>
                                 <select
@@ -509,7 +978,11 @@ function UserDetail() {
                                     <FaArrowLeft className='text-[#e9677b]' />
                                 </button>
                                 <img className="w-[250px] h-auto mb-9" src={darkLogo} alt="Helpy Logo" />
-                                <h2 className="text-[#f86a82] font-semibold mb-4 text-center">Select the bills you can help a friend with:</h2>
+                                <h2 className="text-[#f86a82] font-semibold mb-4 text-center">
+                                    {gender === 'Men'
+                                        ? 'Select the bills you can help with'
+                                        : 'Select the Bills you need help with'}
+                                </h2>
 
                                 <div className="grid grid-cols-2 gap-4 mb-6 w-full">
                                     {billsData.map((bill) => (
@@ -530,7 +1003,8 @@ function UserDetail() {
                                     className="px-2 py-3 mt-2 w-full rounded-[30px] hover:bg-[#f86a82] text-white bg-[#e9677b]"
                                     onClick={() => {
                                         if (selectedBills.length === 0) {
-                                            setErrorMessage("Please select at least one bill.");
+                                            setAlertMessage('Please select at least one bill.');
+                                            setAlertVisible(true);
                                         } else {
                                             setErrorMessage("");
                                             setShowForm(4); // Move to next form if a bill is selected
@@ -547,6 +1021,7 @@ function UserDetail() {
                 )}
 
                 {showForm === 4 && (
+
                     <div className="py-10 px-10 flex justify-center flex-col items-center">
                         <button onClick={() => setShowForm(3)} className="fixed top-4 left-6 inline-block bg-white rounded-[100%] p-3">
                             <FaArrowLeft className='text-[#e9677b]' />
@@ -601,58 +1076,98 @@ function UserDetail() {
                                 </div>
                             )}
 
-                            {/* File Upload Button */}
-                            <div className='flex justify-center'>
-                                <button
-                                    type="button"
-                                    className="btn flex flex-col justify-center items-center bg-[#e9677b] text-white w-fit py-3 px-6 rounded-[30px] mb-4 hover:bg-[#f86a82] transition"
-                                    onClick={() => document.getElementById('file-upload').click()}
-                                >
-                                    <span className="text-sm">Tap to Upload Photos</span>
-                                    <input
-                                        id="file-upload"
-                                        type="file"
-                                        accept="image/png, image/jpeg, image/jpg"
-                                        multiple
-                                        className="hidden"
-                                        onChange={handleImageChange}
-                                    />
-                                </button>
-                            </div>
+                            {/* Show Buttons Only When Total Images < 8 */}
+                            {totalImages < maxTotalImages && (
+                                <div className="flex justify-center gap-4 mb-6">
+                                    <button
+                                        className="py-3 px-2 mt-2 w-full rounded-[30px] hover:bg-[#f86a82] text-white bg-[#e9677b]"
+                                        onClick={() => handleSelectImages(true)}
+                                    >
+                                        Select Public Images
+                                    </button>
+                                    <button
+                                        className="py-3 px-2 mt-2 w-full rounded-[30px] hover:bg-[#f86a82] text-white bg-[#e9677b]"
+                                        onClick={() => handleSelectImages(false)}
+                                    >
+                                        Select Private Images
+                                    </button>
+                                </div>
+                            )}
 
-                            {/* Image Preview Section */}
-                            <div className="grid grid-cols-3 gap-4 w-full">
-                                {imageUrls.map((url, index) => (
-                                    <div key={index} className="relative p-2 border rounded-lg">
-                                        <img
-                                            src={url}
-                                            alt={`uploaded-${index}`}
-                                            className="w-full rounded-lg object-contain h-[120px]"
-                                            onClick={() => toggleImageType(index)} // Assign tag on click
-                                        />
-                                        {imageTypes[index] && (
-                                            <span className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs text-white ${imageTypes[index] === 'profile' ? 'bg-blue-500' : 'bg-red-500'}`}>
-                                                {imageTypes[index] === 'profile' ? 'Profile' : 'Private'}
-                                            </span>
-                                        )}
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveImage(index)}
-                                            className="absolute top-2 right-2 bg-white rounded-full p-1 text-red-500 shadow-md"
-                                        >
-                                            <FaRegCircleXmark />
-                                        </button>
+                            {alertMessage && <p className="text-red-600 text-center mb-4">{alertMessage}</p>}
+                            {totalImages > 0 && (
+                                <div className="mb-8">
+                                    <h3 className="text-l g font-semibold text-[#e9677b] mb-4">Public Images</h3>
+                                    <div className="flex gap-4 overflow-x-auto">
+                                        {publicImages.map((uri, index) => (
+                                            <div
+                                                key={index}
+                                                className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden border border-gray-300"
+                                            >
+                                                {/* Image */}
+                                                <img
+                                                    src={uri}
+                                                    alt={`Public ${index}`}
+                                                    className="w-full h-full object-cover cursor-pointer"
+                                                    onClick={() => handleSetProfileImage(uri)}
+                                                    style={{
+                                                        border: selectedProfileImage === uri ? '2px solid blue' : 'none',
+                                                    }}
+                                                />
+
+                                                {/* Remove Button */}
+                                                <button
+                                                    onClick={() => handleRemoveImage(uri, true)}
+                                                    className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full shadow-md hover:bg-red-700"
+                                                >
+                                                    <FaTimes size={12} />
+                                                </button>
+
+                                                {/* Profile Image Tag */}
+                                                {selectedProfileImage === uri && (
+                                                    <div className="absolute top-0 left-0 bg-[#e9677b] text-white text-xs font-semibold px-2 py-1 rounded-tr-md">
+                                                        Profile Image
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            )}
 
-                            {/* Submit Button */}
+                            {totalImages > 0 && (
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-semibold text-[#e9677b] mb-4">Private Images</h3>
+                                    <div className="flex gap-4 overflow-x-auto">
+                                        {privateImages.map((uri, index) => (
+                                            <div
+                                                key={index}
+                                                className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden border border-gray-300"
+                                            >
+                                                <img
+                                                    src={uri}
+                                                    alt={`Private ${index}`}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <button
+                                                    onClick={() => handleRemoveImage(uri, false)}
+                                                    className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full shadow-md hover:bg-red-700"
+                                                >
+                                                    <FaTimes size={12} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <button
-                                type="submit"
                                 className="py-3 px-2 mt-2 w-full rounded-[30px] hover:bg-[#f86a82] text-white bg-[#e9677b]"
+                                onClick={handleSubmit}
                             >
                                 Next
                             </button>
+
 
                             {/* Error Message Display */}
                             {errorMessage && <p className="text-red-500 text-center mt-4">{errorMessage}</p>}
@@ -706,74 +1221,6 @@ function UserDetail() {
                                 </select>
                             </div>
 
-                            {/* Body Type Selector */}
-                            <div className="mb-4">
-                                <label className="block mb-2 text-[#000] font-semibold text-sm">Body Type</label>
-                                <div className="flex flex-wrap justify-between gap-2 mb-4">
-                                    {['Slim', 'Athletic', 'Average', 'Heavyset'].map(type => (
-                                        <button
-                                            type="button"
-                                            key={type}
-                                            onClick={() => setBodyType(type)}
-                                            className={`w-[48%] md:w-[23%] p-2 rounded-[16px] text-sm ${bodyType === type ? 'bg-[#e9677b] text-white' : 'bg-gray-200'}`}
-                                        >
-                                            {type}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Smoking Status Selector */}
-                            <div className="mb-4">
-                                <label className="block mb-2 text-[#000] font-semibold text-sm">Smoking</label>
-                                <div className="flex flex-wrap justify-between gap-2 mb-4">
-                                    {['Non-smoker', 'Occasional', 'Regular'].map(status => (
-                                        <button
-                                            type="button"
-                                            key={status}
-                                            onClick={() => setSmoking(status)}
-                                            className={`w-[48%] md:w-[30%] p-2 rounded-[16px] text-sm ${smoking === status ? 'bg-[#e9677b] text-white' : 'bg-gray-200'}`}
-                                        >
-                                            {status}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Drinking Status Selector */}
-                            <div className="mb-4">
-                                <label className="block mb-2 text-[#000] font-semibold text-sm">Drinking</label>
-                                <div className="flex flex-wrap justify-between gap-2 mb-4">
-                                    {['Non-drinker', 'Social drinker', 'Regular drinker'].map(status => (
-                                        <button
-                                            type="button"
-                                            key={status}
-                                            onClick={() => setDrinking(status)}
-                                            className={`w-[48%] md:w-[30%] p-2 rounded-[16px] text-sm ${drinking === status ? 'bg-[#e9677b] text-white' : 'bg-gray-200'}`}
-                                        >
-                                            {status}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Relationship Status Selector */}
-                            <div className="mb-4">
-                                <label className="block mb-2 text-[#000] font-semibold text-sm">Relationship Status</label>
-                                <div className="flex flex-wrap justify-between gap-2 mb-4">
-                                    {['Single', 'In a relationship', 'Married', 'Divorced'].map(status => (
-                                        <button
-                                            type="button"
-                                            key={status}
-                                            onClick={() => setRelationshipStatus(status)}
-                                            className={`w-[48%] p-2 rounded-[16px] text-sm ${relationshipStatus === status ? 'bg-[#e9677b] text-white' : 'bg-gray-200'}`}
-                                        >
-                                            {status}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
                             {/* Education Selector */}
                             <div className="mb-4">
                                 <label className="block mb-2 text-[#000] font-semibold text-sm">Education</label>
@@ -793,9 +1240,9 @@ function UserDetail() {
 
                             {/* Children Selector */}
                             <div className="mb-4">
-                                <label className="block mb-2 text-[#000] font-semibold text-sm">Children</label>
+                                <label className="block mb-2 text-[#000] font-semibold text-sm">Kids</label>
                                 <div className="flex flex-wrap justify-between gap-2 mb-4">
-                                    {['Yes', "No", "Not Preferred"].map(status => (
+                                    {["Doesn't have Kids", "Have Kids", "Prefer Not To Reveal"].map(status => (
                                         <button
                                             type="button"
                                             key={status}
@@ -807,6 +1254,74 @@ function UserDetail() {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Smoking Status Selector */}
+                            <div className="mb-4">
+                                <label className="block mb-2 text-[#000] font-semibold text-sm">Smoker</label>
+                                <div className="flex flex-wrap justify-between gap-2 mb-4">
+                                    {['Non-smoker', 'Occasional Smoker', 'Heavy Smoker'].map(status => (
+                                        <button
+                                            type="button"
+                                            key={status}
+                                            onClick={() => setSmoking(status)}
+                                            className={`w-[48%] md:w-[30%] p-2 rounded-[16px] text-sm ${smoking === status ? 'bg-[#e9677b] text-white' : 'bg-gray-200'}`}
+                                        >
+                                            {status}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            {/* Drinking Status Selector */}
+                            <div className="mb-4">
+                                <label className="block mb-2 text-[#000] font-semibold text-sm">Drinker</label>
+                                <div className="flex flex-wrap justify-between gap-2 mb-4">
+                                    {['Non-drinker', 'Social drinker', 'Heavy Drinker'].map(status => (
+                                        <button
+                                            type="button"
+                                            key={status}
+                                            onClick={() => setDrinking(status)}
+                                            className={`w-[48%] md:w-[30%] p-2 rounded-[16px] text-sm ${drinking === status ? 'bg-[#e9677b] text-white' : 'bg-gray-200'}`}
+                                        >
+                                            {status}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Relationship Status Selector */}
+                            <div className="mb-4">
+                                <label className="block mb-2 text-[#000] font-semibold text-sm">Relationship Status</label>
+                                <div className="flex flex-wrap justify-between gap-2 mb-4">
+                                    {['Single', 'In a relationship', 'Married', 'Divorced', 'Situationship'].map(status => (
+                                        <button
+                                            type="button"
+                                            key={status}
+                                            onClick={() => setRelationshipStatus(status)}
+                                            className={`w-[48%] p-2 rounded-[16px] text-sm ${relationshipStatus === status ? 'bg-[#e9677b] text-white' : 'bg-gray-200'}`}
+                                        >
+                                            {status}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Body Type Selector */}
+                            <div className="mb-4">
+                                <label className="block mb-2 text-[#000] font-semibold text-sm">Physical Appearance</label>
+                                <div className="flex flex-wrap justify-between gap-2 mb-4">
+                                    {['Slim', 'Athletic', 'Average', 'Heavyset'].map(type => (
+                                        <button
+                                            type="button"
+                                            key={type}
+                                            onClick={() => setBodyType(type)}
+                                            className={`w-[48%] md:w-[23%] p-2 rounded-[16px] text-sm ${bodyType === type ? 'bg-[#e9677b] text-white' : 'bg-gray-200'}`}
+                                        >
+                                            {type}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
 
                             <button
                                 type="submit"
@@ -827,5 +1342,4 @@ function UserDetail() {
 }
 
 export default UserDetail;
-
 

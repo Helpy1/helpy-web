@@ -1,64 +1,74 @@
-// ImageUpload.js
 import React, { useState } from 'react';
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage } from '../firebase/firebase-config';
+import axios from 'axios';
 
-const ImageUpload = () => {
-  const [image, setImage] = useState(null);
-  const [progress, setProgress] = useState(0);
-  const [downloadURL, setDownloadURL] = useState(null);
+const ImageUploader = () => {
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('');
+  const [gUid, setGUid] = useState('YZ2QlVEDFZditC2I1NqAxAf13PI2'); // Example gUid, replace with actual value
 
-  const handleImageChange = (e) => {
-    if (e.target.files[0]) {
-      setImage(e.target.files[0]);
-    }
+  const handleImageChange = (event) => {
+    setSelectedImages(event.target.files);
   };
 
-  const handleUpload = () => {
-    if (!image) {
-      alert("Please choose an image first!");
+  const handleUpload = async () => {
+    if (selectedImages.length === 0) {
+      setUploadStatus('No images selected');
       return;
     }
 
-    const storageRef = ref(storage, `images/${image.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, image);
+    const formData = new FormData();
 
-    uploadTask.on(
-      "state_changed",
-      (snapshot) => {
-        const progress = Math.round(
-          (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-        );
-        setProgress(progress);
-      },
-      (error) => {
-        console.error("Error uploading file:", error);
-      },
-      () => {
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-          setDownloadURL(downloadURL);
-          console.log("File available at", downloadURL);
-        });
-      }
-    );
+    // Append each image to the FormData object
+    for (let i = 0; i < selectedImages.length; i++) {
+      formData.append('imageFiles', selectedImages[i]); // key should be 'imageFiles' as per the cURL example
+    }
+
+    setUploading(true);
+    setUploadStatus('Uploading...');
+
+    try {
+      const response = await axios.post(
+        `https://usamaanwar-001-site1.atempurl.com/api/UploadListOfImagesToGoogleBucket?gUid=${gUid}`, // Include gUid in the URL
+        formData,
+        {
+          headers: {
+            'Accept': '*/*',
+            'Authorization': '0f910af0-db08-4d2e-8533-f79028b98345', // Authorization if needed
+            'Content-Type': 'multipart/form-data', // Axios will automatically set this, but we keep it here for clarity
+          },
+        }
+      );
+
+      setUploading(false);
+      setUploadStatus('Upload successful!');
+      console.log('Response:', response.data); // Handle the successful response here
+    } catch (error) {
+      setUploading(false);
+      setUploadStatus('Upload failed');
+      console.error('Upload error:', error.response ? error.response.data : error.message);
+    }
   };
 
   return (
-    <div style={{ textAlign: 'center' }}>
-      <h2>Image Upload Test</h2>
-      <input type="file" onChange={handleImageChange} accept="image/*" />
-      <button onClick={handleUpload}>Upload Image</button>
-      <br />
-      <progress value={progress} max="100" />
-      <p>{progress}%</p>
-      {downloadURL && (
-        <div>
-          <p>Image uploaded successfully!</p>
-          <img src={downloadURL} alt="Uploaded" width="300" />
-        </div>
-      )}
+    <div>
+      <h3>Upload Images to Google Cloud Bucket</h3>
+      <input
+        type="file"
+        multiple
+        accept="image/*"
+        onChange={handleImageChange}
+      />
+      <div>
+        {uploading ? (
+          <p>{uploadStatus}</p>
+        ) : (
+          <button onClick={handleUpload}>Upload Images</button>
+        )}
+      </div>
+      {uploadStatus && !uploading && <p>{uploadStatus}</p>}
     </div>
   );
 };
 
-export default ImageUpload;
+export default ImageUploader;
